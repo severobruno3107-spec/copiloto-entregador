@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copiloto de Rotas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  :root {
+    --brand: #2563EB;
+    --brand-light: #EFF6FF;
+    --brand-dark: #1D4ED8;
+    --success: #16A34A;
+    --success-light: #F0FDF4;
+    --warning: #D97706;
+    --warning-light: #FFFBEB;
+    --danger: #DC2626;
+    --danger-light: #FEF2F2;
+    --gray-50: #F9FAFB;
+    --gray-100: #F3F4F6;
+    --gray-200: #E5E7EB;
+    --gray-300: #D1D5DB;
+    --gray-400: #9CA3AF;
+    --gray-500: #6B7280;
+    --gray-600: #4B5563;
+    --gray-700: #374151;
+    --gray-800: #1F2937;
+    --gray-900: #111827;
+    --radius: 10px;
+    --radius-lg: 14px;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow: 0 4px 12px rgba(0,0,0,0.08);
+    --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--gray-100);
+    color: var(--gray-800);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: #fff;
+    border-bottom: 1px solid var(--gray-200);
+    padding: 0 20px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--gray-900);
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: var(--brand);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-size: 15px;
+  }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* ── BTN SYSTEM ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px; font-weight: 500;
+    cursor: pointer; border: none;
+    transition: all .15s ease;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: var(--brand); color: #fff;
+  }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-secondary {
+    background: #fff; color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+  }
+  .btn-secondary:hover { background: var(--gray-50); border-color: var(--gray-300); }
+  .btn-ghost {
+    background: transparent; color: var(--gray-600);
+    padding: 8px 10px;
+  }
+  .btn-ghost:hover { background: var(--gray-100); }
+  .btn-danger { background: var(--danger-light); color: var(--danger); }
+  .btn-danger:hover { background: #fee2e2; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-success:hover { background: #15803d; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+  .btn i { font-size: 13px; }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 380px;
+    min-width: 340px;
+    background: #fff;
+    border-right: 1px solid var(--gray-200);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-top {
+    padding: 16px;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+
+  .input-row { display: flex; gap: 8px; }
+
+  .input-wrapper {
+    flex: 1;
+    position: relative;
+  }
+  .input-wrapper i {
+    position: absolute; left: 11px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400); font-size: 13px;
+    pointer-events: none;
+  }
+  .input-wrapper input, .input-wrapper textarea {
+    width: 100%;
+    padding: 9px 12px 9px 32px;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13.5px;
+    color: var(--gray-800);
+    background: var(--gray-50);
+    transition: border-color .15s, box-shadow .15s;
+    resize: none;
+    outline: none;
+  }
+  .input-wrapper input::placeholder,
+  .input-wrapper textarea::placeholder { color: var(--gray-400); }
+  .input-wrapper input:focus,
+  .input-wrapper textarea:focus {
+    border-color: var(--brand);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(37,99,235,.1);
+  }
+  .textarea-wrapper { position: relative; }
+  .textarea-wrapper i {
+    top: 12px; transform: none;
+  }
+  .textarea-wrapper textarea { padding: 9px 12px 9px 32px; min-height: 80px; }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    display: flex;
+    padding: 10px 16px;
+    gap: 0;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+  }
+  .stat {
+    flex: 1; text-align: center;
+    padding: 6px 4px;
+  }
+  .stat + .stat { border-left: 1px solid var(--gray-200); }
+  .stat-val {
+    font-size: 18px; font-weight: 600;
+    color: var(--gray-900); line-height: 1;
+    font-family: 'DM Mono', monospace;
+  }
+  .stat-label { font-size: 11px; color: var(--gray-500); margin-top: 3px; }
+
+  /* ── ROUTE LIST ── */
+  .route-list {
+    flex: 1; overflow-y: auto;
+    padding: 8px;
+  }
+  .route-list::-webkit-scrollbar { width: 4px; }
+  .route-list::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+
+  .stop-card {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 12px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    margin-bottom: 4px;
+    cursor: pointer;
+    transition: all .15s;
+    position: relative;
+  }
+  .stop-card:hover { background: var(--gray-50); border-color: var(--gray-200); }
+  .stop-card.selected { background: var(--brand-light); border-color: #BFDBFE; }
+  .stop-card.geocoding { opacity: 0.7; }
+
+  .stop-number {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--brand); color: #fff;
+    font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; margin-top: 1px;
+  }
+  .stop-number.origin { background: var(--success); }
+  .stop-number.last { background: var(--gray-500); }
+
+  .stop-info { flex: 1; min-width: 0; }
+  .stop-name {
+    font-size: 13.5px; font-weight: 500;
+    color: var(--gray-800);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .stop-addr {
+    font-size: 12px; color: var(--gray-500);
+    margin-top: 2px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .stop-dist {
+    font-size: 11.5px; color: var(--brand);
+    margin-top: 3px; font-weight: 500;
+  }
+  .stop-actions { display: flex; gap: 4px; opacity: 0; transition: opacity .15s; }
+  .stop-card:hover .stop-actions { opacity: 1; }
+  .stop-action-btn {
+    width: 26px; height: 26px;
+    border: none; background: transparent; cursor: pointer;
+    border-radius: 6px; color: var(--gray-400);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; transition: all .12s;
+  }
+  .stop-action-btn:hover { background: var(--gray-200); color: var(--gray-700); }
+  .stop-action-btn.del:hover { background: var(--danger-light); color: var(--danger); }
+
+  .geo-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 11px; padding: 2px 7px;
+    border-radius: 20px; margin-top: 3px;
+  }
+  .geo-ok { background: var(--success-light); color: var(--success); }
+  .geo-err { background: var(--danger-light); color: var(--danger); }
+  .geo-pending { background: var(--warning-light); color: var(--warning); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 32px; text-align: center; gap: 10px;
+    color: var(--gray-400);
+  }
+  .empty-state i { font-size: 36px; margin-bottom: 4px; }
+  .empty-state p { font-size: 14px; line-height: 1.5; }
+
+  /* ── SIDEBAR BOTTOM ── */
+  .sidebar-bottom {
+    padding: 12px 16px;
+    border-top: 1px solid var(--gray-200);
+    display: flex; gap: 8px;
+  }
+
+  /* ── MAP AREA ── */
+  .map-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  #map {
+    width: 100%; height: 100%;
+  }
+
+  /* ── MAP OVERLAYS ── */
+  .map-overlay {
+    position: absolute; z-index: 10;
+  }
+  .map-top-right {
+    top: 12px; right: 12px;
+    display: flex; flex-direction: column; gap: 8px; align-items: flex-end;
+  }
+  .map-bottom-left {
+    bottom: 28px; left: 12px;
+  }
+
+  .map-card {
+    background: #fff; border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    padding: 14px 16px;
+    min-width: 220px;
+  }
+  .map-card-title {
+    font-size: 11px; font-weight: 600;
+    color: var(--gray-500); text-transform: uppercase;
+    letter-spacing: .5px; margin-bottom: 8px;
+  }
+  .map-stat { display: flex; justify-content: space-between; align-items: center; }
+  .map-stat-val { font-size: 22px; font-weight: 600; color: var(--gray-900); font-family: 'DM Mono', monospace; }
+  .map-stat-unit { font-size: 12px; color: var(--gray-500); }
+  .map-divider { height: 1px; background: var(--gray-100); margin: 8px 0; }
+
+  /* ── TOAST ── */
+  .toast-container {
+    position: fixed; bottom: 20px; right: 20px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 9999;
+  }
+  .toast {
+    background: var(--gray-900); color: #fff;
+    padding: 10px 16px; border-radius: var(--radius);
+    font-size: 13.5px; box-shadow: var(--shadow-lg);
+    display: flex; align-items: center; gap: 8px;
+    animation: slideIn .25s ease;
+    max-width: 320px;
+  }
+  .toast.success { background: var(--success); }
+  .toast.warning { background: var(--warning); }
+  .toast.error { background: var(--danger); }
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ── MODAL ── */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity .2s;
+  }
+  .modal-bg.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: #fff; border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 24px; width: 480px; max-width: 95vw;
+    transform: scale(.95); transition: transform .2s;
+  }
+  .modal-bg.open .modal { transform: scale(1); }
+  .modal-title { font-size: 17px; font-weight: 600; margin-bottom: 16px; color: var(--gray-900); }
+  .modal-label { font-size: 13px; color: var(--gray-600); margin-bottom: 6px; font-weight: 500; }
+  .modal-input {
+    width: 100%; padding: 9px 12px;
+    border: 1px solid var(--gray-200); border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    color: var(--gray-800); outline: none;
+    transition: border-color .15s;
+  }
+  .modal-input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* ── SPINNER ── */
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: inline-block;
+  }
+  .spinner.dark {
+    border-color: rgba(0,0,0,.1);
+    border-top-color: var(--brand);
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── LOADING OVERLAY ── */
+  .loading-overlay {
+    position: absolute; inset: 0; z-index: 50;
+    background: rgba(255,255,255,.85);
+    display: none; align-items: center; justify-content: center;
+    flex-direction: column; gap: 14px; backdrop-filter: blur(2px);
+  }
+  .loading-overlay.show { display: flex; }
+  .loading-text { font-size: 14px; color: var(--gray-600); font-weight: 500; }
+
+  /* ── ORIGIN TAG ── */
+  .origin-tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: var(--success-light); color: var(--success);
+    font-size: 11px; font-weight: 600; padding: 3px 8px;
+    border-radius: 20px; border: 1px solid #bbf7d0;
+  }
+
+  /* drag handle */
+  .drag-handle {
+    cursor: grab; color: var(--gray-300);
+    font-size: 14px; padding: 2px 4px;
+    transition: color .12s;
+  }
+  .drag-handle:hover { color: var(--gray-500); }
+  .drag-handle:active { cursor: grabbing; }
+
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px 4px;
+    font-size: 11px; font-weight: 600;
+    color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px;
+  }
+
+  .progress-bar {
+    height: 3px; background: var(--gray-200); border-radius: 2px; overflow: hidden;
+    margin: 0 16px 8px;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--brand);
+    border-radius: 2px; transition: width .4s ease;
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <div class="logo-icon"><i class="fas fa-route"></i></div>
+    Copiloto de Rotas
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-ghost btn-sm" onclick="showImportModal()"><i class="fas fa-file-import"></i> Importar</button>
+    <button class="btn btn-secondary btn-sm" id="btn-clear" onclick="clearAll()"><i class="fas fa-trash"></i> Limpar</button>
+    <button class="btn btn-primary btn-sm" id="btn-optimize" onclick="optimizeRoute()" disabled>
+      <i class="fas fa-bolt"></i> Otimizar Rota
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <!-- TOP INPUT -->
+    <div class="sidebar-top">
+      <!-- Origin -->
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">
+          <span class="origin-tag"><i class="fas fa-home"></i> Ponto de partida</span>
+        </div>
+        <div class="input-row">
+          <div class="input-wrapper" style="flex:1">
+            <i class="fas fa-map-marker-alt" style="color:var(--success)"></i>
+            <input type="text" id="origin-input" placeholder="Ex: Rua Augusta, 1200, São Paulo" oninput="onOriginInput()">
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="geocodeOrigin()"><i class="fas fa-search-location"></i></button>
+        </div>
+        <div id="origin-status" style="font-size:11px;color:var(--gray-500);margin-top:4px;display:none"></div>
+      </div>
+
+      <!-- Add Stop -->
+      <div>
+        <div style="font-size:11px;font-weight:600;color:var(--gray-500);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Adicionar parada</div>
+        <div class="textarea-wrapper input-wrapper">
+          <i class="fas fa-location-dot"></i>
+          <textarea id="stop-input" placeholder="Cole endereços aqui — um por linha&#10;Ex:&#10;Av. Paulista, 1000&#10;Rua Oscar Freire, 900&#10;Al. Santos, 200"></textarea>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button class="btn btn-primary btn-sm" onclick="addStops()" style="flex:1">
+            <i class="fas fa-plus"></i> Adicionar paradas
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar" id="stats-bar" style="display:none">
+      <div class="stat">
+        <div class="stat-val" id="stat-stops">0</div>
+        <div class="stat-label">Paradas</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-km">—</div>
+        <div class="stat-label">Dist. total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-time">—</div>
+        <div class="stat-label">Tempo est.</div>
+      </div>
+    </div>
+
+    <!-- PROGRESS BAR (geocoding) -->
+    <div class="progress-bar" id="progress-bar" style="display:none">
+      <div class="progress-bar-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- ROUTE LIST -->
+    <div id="route-list" class="route-list">
+      <div class="empty-state" id="empty-state">
+        <i class="fas fa-route"></i>
+        <strong style="color:var(--gray-600)">Nenhuma parada ainda</strong>
+        <p>Defina o ponto de partida e cole os endereços acima. A rota será otimizada automaticamente.</p>
+      </div>
+    </div>
+
+    <!-- SIDEBAR BOTTOM -->
+    <div class="sidebar-bottom" id="sidebar-bottom" style="display:none">
+      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="exportRoute()">
+        <i class="fas fa-download"></i> Exportar
+      </button>
+      <button class="btn btn-success btn-sm" style="flex:1" onclick="openInMaps()">
+        <i class="fab fa-google"></i> Abrir no Maps
+      </button>
+    </div>
+  </div>
+
+  <!-- MAP AREA -->
+  <div class="map-area">
+    <div id="map"></div>
+
+    <!-- Loading overlay -->
+    <div class="loading-overlay" id="map-loading">
+      <div class="spinner dark" style="width:28px;height:28px;border-width:3px"></div>
+      <div class="loading-text" id="loading-text">Geocodificando endereços...</div>
+    </div>
+
+    <!-- Top-right overlays -->
+    <div class="map-overlay map-top-right" id="map-info" style="display:none">
+      <div class="map-card">
+        <div class="map-card-title"><i class="fas fa-bolt" style="color:var(--brand)"></i> Rota otimizada</div>
+        <div class="map-stat">
+          <span class="map-stat-val" id="map-total-km">0</span>
+          <span class="map-stat-unit">km</span>
+        </div>
+        <div class="map-divider"></div>
+        <div style="font-size:12px;color:var(--gray-500);display:flex;align-items:center;gap:5px;">
+          <i class="fas fa-clock"></i>
+          <span id="map-total-time">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="modal-bg" id="import-modal">
+  <div class="modal">
+    <div class="modal-title"><i class="fas fa-file-import" style="color:var(--brand);margin-right:8px"></i>Importar endereços</div>
+    <div class="modal-label">Cole uma lista de endereços (um por linha)</div>
+    <textarea class="modal-input" id="import-textarea" rows="8" placeholder="Rua das Flores, 100, São Paulo&#10;Av. Brigadeiro Faria Lima, 2000&#10;Rua Pamplona, 518&#10;..."></textarea>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeImportModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="importFromModal()"><i class="fas fa-check"></i> Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- Leaflet (OpenStreetMap - no API key needed) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<script>
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+let stops = [];       // { id, raw, name, address, lat, lng, geocoded, error }
+let origin = null;    // { lat, lng, address }
+let map = null;
+let markers = [];
+let routeLine = null;
+let optimizedOrder = [];
+let totalDistKm = 0;
+
+// ─────────────────────────────────────────
+// INIT MAP
+// ─────────────────────────────────────────
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([-23.55, -46.63], 12);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO',
+    maxZoom: 19
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+}
+initMap();
+
+// ─────────────────────────────────────────
+// GEOCODING (Nominatim + fallback)
+// ─────────────────────────────────────────
+async function geocodeAddress(raw) {
+  const q = raw.trim();
+  // Add SP as default context if no city mentioned
+  const query = /são paulo|sp|campinas|santos|guarulhos|osasco/i.test(q)
+    ? q : q + ', São Paulo, Brasil';
+
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`;
+  try {
+    const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      const r = data[0];
+      return {
+        lat: parseFloat(r.lat),
+        lng: parseFloat(r.lon),
+        displayName: r.display_name.split(',').slice(0,3).join(',').trim()
+      };
+    }
+    return null;
+  } catch(e) {
+    return null;
+  }
+}
+
+// ─────────────────────────────────────────
+// ORIGIN
+// ─────────────────────────────────────────
+function onOriginInput() {
+  origin = null;
+  document.getElementById('origin-status').style.display = 'none';
+}
+
+async function geocodeOrigin() {
+  const val = document.getElementById('origin-input').value.trim();
+  if (!val) { toast('Digite o endereço de partida', 'warning'); return; }
+
+  const statusEl = document.getElementById('origin-status');
+  statusEl.style.display = 'block';
+  statusEl.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+  statusEl.style.color = 'var(--gray-500)';
+
+  const result = await geocodeAddress(val);
+  if (result) {
+    origin = result;
+    statusEl.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success)"></i> ' + result.displayName;
+    statusEl.style.color = 'var(--success)';
+    map.setView([result.lat, result.lng], 13);
+    refreshMap();
+    toast('Ponto de partida definido!', 'success');
+  } else {
+    statusEl.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> Endereço não encontrado';
+    statusEl.style.color = 'var(--danger)';
+  }
+}
+
+// ─────────────────────────────────────────
+// ADD STOPS
+// ─────────────────────────────────────────
+async function addStops() {
+  const input = document.getElementById('stop-input').value.trim();
+  if (!input) { toast('Digite ao menos um endereço', 'warning'); return; }
+
+  const lines = input.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  if (!lines.length) return;
+
+  document.getElementById('stop-input').value = '';
+
+  const newStops = lines.map(l => ({
+    id: Date.now() + Math.random(),
+    raw: l,
+    name: l.split(',')[0].trim(),
+    address: l,
+    lat: null, lng: null,
+    geocoded: false, error: false
+  }));
+
+  stops = [...stops, ...newStops];
+  renderList();
+  updateStats();
+  showLoading('Geocodificando endereços...');
+  document.getElementById('progress-bar').style.display = 'block';
+
+  let done = 0;
+  const total = newStops.length;
+
+  for (const stop of newStops) {
+    const result = await geocodeAddress(stop.raw);
+    if (result) {
+      stop.lat = result.lat;
+      stop.lng = result.lng;
+      stop.address = result.displayName;
+      stop.geocoded = true;
+    } else {
+      stop.error = true;
+    }
+    done++;
+    const pct = Math.round(done / total * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('loading-text').textContent = `Geocodificando ${done}/${total}...`;
+    renderList();
+    await sleep(200); // Rate limit Nominatim
+  }
+
+  hideLoading();
+  document.getElementById('progress-bar').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '0%';
+
+  const ok = stops.filter(s => s.geocoded).length;
+  const err = stops.filter(s => s.error).length;
+  if (err > 0) {
+    toast(`${ok} endereços encontrados, ${err} não encontrados`, 'warning');
+  } else {
+    toast(`${ok} paradas adicionadas`, 'success');
+  }
+
+  refreshMap();
+  updateStats();
+  updateOptimizeBtn();
+}
+
+// ─────────────────────────────────────────
+// OPTIMIZE (Nearest Neighbor TSP)
+// ─────────────────────────────────────────
+async function optimizeRoute() {
+  const geocoded = stops.filter(s => s.geocoded);
+  if (geocoded.length < 2) { toast('Adicione ao menos 2 paradas geocodificadas', 'warning'); return; }
+  if (!origin) { toast('Defina o ponto de partida primeiro', 'warning'); return; }
+
+  showLoading('Otimizando rota...');
+  await sleep(300);
+
+  const pts = [
+    { ...origin, isOrigin: true },
+    ...geocoded
+  ];
+
+  // Nearest Neighbor from origin
+  const visited = new Set([0]);
+  const route = [pts[0]];
+  let current = 0;
+
+  while (visited.size < pts.length) {
+    let bestDist = Infinity, bestIdx = -1;
+    for (let i = 1; i < pts.length; i++) {
+      if (visited.has(i)) continue;
+      const d = haversine(pts[current].lat, pts[current].lng, pts[i].lat, pts[i].lng);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    if (bestIdx === -1) break;
+    visited.add(bestIdx);
+    route.push(pts[bestIdx]);
+    current = bestIdx;
+  }
+
+  // Reorder stops to match route (skip origin at index 0)
+  const newOrder = route.slice(1).map(p => geocoded.find(s => s.lat === p.lat && s.lng === p.lng)).filter(Boolean);
+  stops = newOrder;
+
+  // Calculate total distance
+  let total = 0;
+  for (let i = 0; i < route.length - 1; i++) {
+    total += haversine(route[i].lat, route[i].lng, route[i+1].lat, route[i+1].lng);
+  }
+  totalDistKm = total;
+
+  hideLoading();
+  renderList();
+  refreshMap(route);
+  updateStats(total);
+  showMapInfo(total);
+  toast('Rota otimizada! 🎉', 'success');
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = deg2rad(lat2 - lat1);
+  const dLng = deg2rad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function deg2rad(d) { return d * Math.PI / 180; }
+
+// ─────────────────────────────────────────
+// MAP RENDERING
+// ─────────────────────────────────────────
+function refreshMap(routePts) {
+  // Clear existing
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+
+  const allPts = [];
+
+  // Origin marker
+  if (origin) {
+    const m = L.marker([origin.lat, origin.lng], { icon: createIcon('home', '#16A34A', true) })
+      .addTo(map).bindPopup('<strong>Ponto de partida</strong><br>' + origin.displayName);
+    markers.push(m);
+    allPts.push([origin.lat, origin.lng]);
+  }
+
+  // Stop markers
+  stops.filter(s => s.geocoded).forEach((s, i) => {
+    const m = L.marker([s.lat, s.lng], { icon: createIcon(i + 1, '#2563EB', false) })
+      .addTo(map).bindPopup(`<strong>Parada ${i+1}: ${s.name}</strong><br>${s.address}`);
+    markers.push(m);
+    allPts.push([s.lat, s.lng]);
+  });
+
+  // Route line
+  if (routePts && routePts.length > 1) {
+    const latlngs = routePts.map(p => [p.lat, p.lng]);
+    routeLine = L.polyline(latlngs, {
+      color: '#2563EB', weight: 3.5, opacity: 0.75,
+      dashArray: null
+    }).addTo(map);
+  } else if (allPts.length > 1) {
+    routeLine = L.polyline(allPts, {
+      color: '#9CA3AF', weight: 2, opacity: 0.5, dashArray: '6,6'
+    }).addTo(map);
+  }
+
+  if (allPts.length > 0) {
+    map.fitBounds(allPts.length === 1 ? [[allPts[0][0]-0.01, allPts[0][1]-0.01],[allPts[0][0]+0.01, allPts[0][1]+0.01]] : allPts, { padding: [40, 40] });
+  }
+}
+
+function createIcon(label, color, isHome) {
+  const svg = isHome
+    ? `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="42" viewBox="0 0 36 42">
+        <path d="M18 0C8 0 0 8 0 18c0 13 18 24 18 24s18-11 18-24C36 8 28 0 18 0z" fill="${color}"/>
+        <text x="18" y="23" text-anchor="middle" fill="white" font-size="14" font-family="sans-serif">⌂</text>
+      </svg>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
+        <path d="M16 0C7.2 0 0 7.2 0 16c0 11.7 16 24 16 24s16-12.3 16-24C32 7.2 24.8 0 16 0z" fill="${color}"/>
+        <text x="16" y="21" text-anchor="middle" fill="white" font-size="13" font-weight="600" font-family="sans-serif">${label}</text>
+      </svg>`;
+
+  return L.divIcon({
+    html: svg,
+    className: '',
+    iconSize: isHome ? [36, 42] : [32, 40],
+    iconAnchor: isHome ? [18, 42] : [16, 40],
+    popupAnchor: [0, -36]
+  });
+}
+
+// ─────────────────────────────────────────
+// RENDER LIST
+// ─────────────────────────────────────────
+function renderList() {
+  const el = document.getElementById('route-list');
+  const empty = document.getElementById('empty-state');
+
+  if (stops.length === 0) {
+    empty.style.display = '';
+    document.getElementById('stats-bar').style.display = 'none';
+    document.getElementById('sidebar-bottom').style.display = 'none';
+    el.innerHTML = '';
+    el.appendChild(empty);
+    return;
+  }
+
+  empty.style.display = 'none';
+  document.getElementById('stats-bar').style.display = '';
+  document.getElementById('sidebar-bottom').style.display = '';
+
+  el.innerHTML = `<div class="section-header">
+    <span>Paradas <span style="background:var(--brand-light);color:var(--brand);border-radius:20px;padding:1px 8px;font-size:11px;">${stops.length}</span></span>
+    <button class="btn btn-ghost btn-sm" onclick="optimizeRoute()" style="font-size:11px;padding:3px 8px;gap:4px;">
+      <i class="fas fa-bolt"></i> Reotimizar
+    </button>
+  </div>`;
+
+  stops.forEach((s, i) => {
+    const numClass = i === 0 ? 'origin' : (i === stops.length - 1 ? 'last' : '');
+    const geoBadge = s.geocoded
+      ? `<span class="geo-badge geo-ok"><i class="fas fa-check-circle"></i> Localizado</span>`
+      : s.error
+        ? `<span class="geo-badge geo-err"><i class="fas fa-exclamation-circle"></i> Não encontrado</span>`
+        : `<span class="geo-badge geo-pending"><i class="fas fa-clock"></i> Aguardando</span>`;
+
+    const card = document.createElement('div');
+    card.className = 'stop-card' + (s.geocoded ? '' : s.error ? '' : ' geocoding');
+    card.innerHTML = `
+      <div class="drag-handle"><i class="fas fa-grip-vertical"></i></div>
+      <div class="stop-number ${numClass}">${i + 1}</div>
+      <div class="stop-info">
+        <div class="stop-name">${s.name}</div>
+        <div class="stop-addr">${s.address}</div>
+        ${geoBadge}
+      </div>
+      <div class="stop-actions">
+        ${s.geocoded ? `<button class="stop-action-btn" onclick="focusStop(${i})" title="Ver no mapa"><i class="fas fa-crosshairs"></i></button>` : ''}
+        <button class="stop-action-btn del" onclick="removeStop('${s.id}')" title="Remover"><i class="fas fa-times"></i></button>
+      </div>
+    `;
+    if (s.geocoded) card.onclick = (e) => { if (!e.target.closest('.stop-actions,.drag-handle')) focusStop(i); };
+    el.appendChild(card);
+  });
+
+  updateStats();
+}
+
+function focusStop(i) {
+  const s = stops[i];
+  if (s && s.lat) { map.setView([s.lat, s.lng], 16); }
+}
+
+function removeStop(id) {
+  stops = stops.filter(s => String(s.id) !== String(id));
+  renderList();
+  refreshMap();
+  updateStats();
+  updateOptimizeBtn();
+}
+
+// ─────────────────────────────────────────
+// STATS
+// ─────────────────────────────────────────
+function updateStats(totalKm) {
+  const count = stops.length;
+  document.getElementById('stat-stops').textContent = count;
+
+  if (totalKm !== undefined) {
+    document.getElementById('stat-km').textContent = totalKm.toFixed(1) + ' km';
+    const mins = Math.round(totalKm / 30 * 60);
+    document.getElementById('stat-time').textContent = mins >= 60
+      ? Math.floor(mins/60) + 'h ' + (mins%60) + 'min'
+      : mins + 'min';
+  } else {
+    document.getElementById('stat-km').textContent = '—';
+    document.getElementById('stat-time').textContent = '—';
+  }
+}
+
+function showMapInfo(km) {
+  const el = document.getElementById('map-info');
+  el.style.display = '';
+  document.getElementById('map-total-km').textContent = km.toFixed(1);
+  const mins = Math.round(km / 30 * 60);
+  document.getElementById('map-total-time').textContent = mins >= 60
+    ? Math.floor(mins/60) + 'h ' + (mins%60) + 'min estimados'
+    : mins + ' min estimados';
+}
+
+function updateOptimizeBtn() {
+  const ok = stops.filter(s => s.geocoded).length >= 2;
+  document.getElementById('btn-optimize').disabled = !(ok && origin);
+}
+
+// ─────────────────────────────────────────
+// EXPORT / OPEN MAPS
+// ─────────────────────────────────────────
+function exportRoute() {
+  const lines = ['ROTA OTIMIZADA — Copiloto de Rotas', ''];
+  if (origin) lines.push('🟢 PARTIDA: ' + origin.displayName, '');
+  stops.forEach((s, i) => {
+    lines.push(`${i+1}. ${s.name}`);
+    if (s.address !== s.name) lines.push(`   ${s.address}`);
+    if (s.lat) lines.push(`   📍 ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}`);
+    lines.push('');
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'rota.txt'; a.click();
+  toast('Rota exportada!', 'success');
+}
+
+function openInMaps() {
+  if (!origin) { toast('Defina o ponto de partida', 'warning'); return; }
+  const geocoded = stops.filter(s => s.geocoded);
+  if (!geocoded.length) { toast('Nenhuma parada localizada', 'warning'); return; }
+
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}`;
+  const waypoints = geocoded.slice(0, -1).map(s => `${s.lat},${s.lng}`).join('|');
+  const dest = geocoded[geocoded.length - 1];
+  url += `&destination=${dest.lat},${dest.lng}`;
+  if (waypoints) url += `&waypoints=${encodeURIComponent(waypoints)}`;
+  url += '&travelmode=driving';
+  window.open(url, '_blank');
+}
+
+// ─────────────────────────────────────────
+// IMPORT MODAL
+// ─────────────────────────────────────────
+function showImportModal() {
+  document.getElementById('import-modal').classList.add('open');
+}
+function closeImportModal() {
+  document.getElementById('import-modal').classList.remove('open');
+}
+function importFromModal() {
+  const val = document.getElementById('import-textarea').value.trim();
+  if (!val) return;
+  document.getElementById('stop-input').value = val;
+  closeImportModal();
+  addStops();
+}
+
+// ─────────────────────────────────────────
+// CLEAR
+// ─────────────────────────────────────────
+function clearAll() {
+  if (stops.length === 0 && !origin) return;
+  if (!confirm('Limpar todas as paradas?')) return;
+  stops = [];
+  origin = null;
+  document.getElementById('origin-input').value = '';
+  document.getElementById('origin-status').style.display = 'none';
+  document.getElementById('map-info').style.display = 'none';
+  renderList();
+  refreshMap();
+  updateOptimizeBtn();
+}
+
+// ─────────────────────────────────────────
+// UTILITIES
+// ─────────────────────────────────────────
+function showLoading(msg) {
+  document.getElementById('map-loading').classList.add('show');
+  document.getElementById('loading-text').textContent = msg || 'Aguarde...';
+}
+function hideLoading() {
+  document.getElementById('map-loading').classList.remove('show');
+}
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function toast(msg, type) {
+  const ct = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || '');
+  const icon = type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'error' ? 'times-circle' : 'info-circle';
+  t.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
+  ct.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity .3s'; setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+// Close modal on background click
+document.getElementById('import-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeImportModal();
+});
+
+// DEMO DATA (preload example)
+(async function preloadDemo() {
+  await sleep(500);
+  document.getElementById('origin-input').value = 'Av. Paulista, 1578, São Paulo';
+  toast('Defina o ponto de partida e adicione suas paradas 👆', '');
+})();
+</script>
+</body>
+</html>
