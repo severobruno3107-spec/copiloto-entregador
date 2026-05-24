@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Copiloto de Rotas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root {
+  --brand: #1D6BF3;
+  --brand-light: #EEF4FF;
+  --brand-dark: #1558D6;
+  --brand-mid: #4D8FF5;
+  --success: #16A34A;
+  --success-light: #F0FDF4;
+  --warning: #D97706;
+  --warning-light: #FFFBEB;
+  --danger: #DC2626;
+  --danger-light: #FEF2F2;
+  --orange: #EA580C;
+  --orange-light: #FFF7ED;
+  --purple: #7C3AED;
+  --purple-light: #F5F3FF;
+  --gray-50: #F9FAFB;
+  --gray-100: #F3F4F6;
+  --gray-200: #E5E7EB;
+  --gray-300: #D1D5DB;
+  --gray-400: #9CA3AF;
+  --gray-500: #6B7280;
+  --gray-600: #4B5563;
+  --gray-700: #374151;
+  --gray-800: #1F2937;
+  --gray-900: #111827;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.07);
+  --shadow: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.13);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--gray-100);
+  color: var(--gray-800);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  background: #fff;
+  border-bottom: 1px solid var(--gray-200);
+  padding: 0 18px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  z-index: 100;
+}
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 15px; color: var(--gray-900); }
+.logo-icon {
+  width: 32px; height: 32px;
+  background: var(--brand);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 14px;
+}
+.header-actions { display: flex; gap: 6px; align-items: center; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 13px;
+  border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  cursor: pointer; border: none;
+  transition: all .15s ease;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--brand); color: #fff; }
+.btn-primary:hover { background: var(--brand-dark); }
+.btn-secondary { background: #fff; color: var(--gray-700); border: 1px solid var(--gray-200); }
+.btn-secondary:hover { background: var(--gray-50); border-color: var(--gray-300); }
+.btn-ghost { background: transparent; color: var(--gray-600); padding: 7px 9px; }
+.btn-ghost:hover { background: var(--gray-100); }
+.btn-danger { background: var(--danger-light); color: var(--danger); }
+.btn-danger:hover { background: #fee2e2; }
+.btn-success { background: var(--success); color: #fff; }
+.btn-success:hover { background: #15803d; }
+.btn-sm { padding: 5px 10px; font-size: 12px; border-radius: 7px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
+
+/* ── LAYOUT ── */
+.main { display: flex; flex: 1; overflow: hidden; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: 370px; min-width: 330px;
+  background: #fff;
+  border-right: 1px solid var(--gray-200);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  transition: width .3s cubic-bezier(.4,0,.2,1), min-width .3s cubic-bezier(.4,0,.2,1), opacity .25s ease;
+  flex-shrink: 0;
+}
+.sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0 !important;
+  opacity: 0;
+  pointer-events: none;
+  border-right: none;
+}
+
+/* ── EXPAND BUTTON (shown when sidebar collapsed) ── */
+.sidebar-expand-btn {
+  position: absolute;
+  left: 12px; top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  width: 42px; height: 42px;
+  background: var(--brand);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px;
+  box-shadow: var(--shadow-lg);
+  cursor: pointer;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease, transform .2s ease;
+}
+.sidebar-expand-btn.visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.sidebar-expand-btn:hover { background: var(--brand-dark); transform: translateY(-50%) scale(1.08); }
+.sidebar-top {
+  padding: 14px 14px 12px;
+  border-bottom: 1px solid var(--gray-200);
+  display: flex; flex-direction: column; gap: 10px;
+}
+
+/* ── ORIGIN INPUT ── */
+.origin-label {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; font-weight: 600;
+  color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px;
+  margin-bottom: 6px;
+}
+.origin-label span {
+  background: var(--success-light); color: var(--success);
+  padding: 2px 8px; border-radius: 20px; font-size: 11px;
+  font-weight: 600; border: 1px solid #bbf7d0;
+}
+.input-row { display: flex; gap: 7px; }
+.input-wrap { flex: 1; position: relative; }
+.input-wrap i.icon-left {
+  position: absolute; left: 10px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray-400); font-size: 12px; pointer-events: none;
+}
+.input-wrap input {
+  width: 100%; padding: 8px 10px 8px 30px;
+  border: 1px solid var(--gray-200); border-radius: var(--radius);
+  font-family: 'DM Sans', sans-serif; font-size: 13px;
+  color: var(--gray-800); background: var(--gray-50);
+  transition: border-color .15s, box-shadow .15s; outline: none;
+}
+.input-wrap input:focus { border-color: var(--brand); background: #fff; box-shadow: 0 0 0 3px rgba(29,107,243,.1); }
+.input-wrap input::placeholder { color: var(--gray-400); }
+#origin-status { font-size: 11px; color: var(--gray-500); margin-top: 4px; }
+
+/* ── UPLOAD ZONE ── */
+.upload-section { display: flex; flex-direction: column; gap: 7px; }
+.upload-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px;
+}
+.upload-zone {
+  border: 2px dashed var(--gray-200);
+  border-radius: var(--radius);
+  padding: 16px 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--gray-50);
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--brand);
+  background: var(--brand-light);
+}
+.upload-zone input[type=file] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-zone-icon { font-size: 22px; color: var(--brand); margin-bottom: 6px; }
+.upload-zone-text { font-size: 13px; font-weight: 500; color: var(--gray-700); }
+.upload-zone-sub { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+.upload-zone.has-file { border-style: solid; border-color: var(--success); background: var(--success-light); }
+.upload-zone.has-file .upload-zone-icon { color: var(--success); }
+
+/* ── OPTIMIZE MODE PILLS ── */
+.mode-section { display: flex; flex-direction: column; gap: 7px; }
+.mode-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px;
+}
+.mode-pills { display: flex; gap: 6px; }
+.mode-pill {
+  flex: 1; padding: 8px 6px;
+  border: 1.5px solid var(--gray-200); border-radius: var(--radius);
+  cursor: pointer; text-align: center;
+  transition: all .15s; background: #fff;
+  user-select: none;
+}
+.mode-pill:hover { border-color: var(--brand-mid); background: var(--brand-light); }
+.mode-pill.active { border-color: var(--brand); background: var(--brand-light); }
+.mode-pill.active.geo { border-color: var(--brand); background: var(--brand-light); }
+.mode-pill.active.comercial { border-color: var(--success); background: var(--success-light); }
+.mode-pill.active.volumoso { border-color: var(--orange); background: var(--orange-light); }
+.mode-pill-icon { font-size: 16px; margin-bottom: 3px; }
+.mode-pill-name { font-size: 11px; font-weight: 600; color: var(--gray-700); display: block; }
+.mode-pill.active.geo .mode-pill-name { color: var(--brand); }
+.mode-pill.active.comercial .mode-pill-name { color: var(--success); }
+.mode-pill.active.volumoso .mode-pill-name { color: var(--orange); }
+.mode-desc {
+  font-size: 11.5px; color: var(--gray-500);
+  background: var(--gray-50); border-radius: 8px;
+  padding: 8px 10px; line-height: 1.5;
+  border: 1px solid var(--gray-100);
+}
+
+/* ── STATS BAR ── */
+.stats-bar {
+  display: flex; padding: 8px 14px;
+  border-bottom: 1px solid var(--gray-200);
+  background: var(--gray-50);
+}
+.stat { flex: 1; text-align: center; padding: 4px 0; }
+.stat + .stat { border-left: 1px solid var(--gray-200); }
+.stat-val { font-size: 16px; font-weight: 600; color: var(--gray-900); line-height: 1; font-family: 'DM Mono', monospace; }
+.stat-label { font-size: 10.5px; color: var(--gray-500); margin-top: 2px; }
+
+/* ── PROGRESS ── */
+.progress-bar { height: 3px; background: var(--gray-200); border-radius: 2px; overflow: hidden; margin: 0; }
+.progress-fill { height: 100%; background: var(--brand); border-radius: 2px; transition: width .3s ease; }
+
+/* ── ROUTE LIST ── */
+.route-list { flex: 1; overflow-y: auto; padding: 6px; }
+.route-list::-webkit-scrollbar { width: 4px; }
+.route-list::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+
+.section-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 10px 3px;
+  font-size: 10.5px; font-weight: 600;
+  color: var(--gray-500); text-transform: uppercase; letter-spacing: .5px;
+}
+
+/* ── STOP CARD ── */
+.stop-card {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 9px 10px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  margin-bottom: 3px;
+  cursor: pointer;
+  transition: all .12s;
+  position: relative;
+}
+.stop-card:hover { background: var(--gray-50); border-color: var(--gray-200); }
+.stop-card.is-commercial { border-left: 3px solid var(--success); background: #f8fffe; }
+.stop-card.is-commercial:hover { background: var(--success-light); }
+.stop-card.is-bulky { border-left: 3px solid var(--orange); background: #fffaf5; }
+.stop-card.is-bulky:hover { background: var(--orange-light); }
+
+.stop-num {
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--brand); color: #fff;
+  font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px;
+  font-family: 'DM Mono', monospace;
+}
+.stop-num.origin { background: var(--success); }
+.stop-num.last { background: var(--gray-500); }
+.stop-num.commercial { background: var(--success); }
+.stop-num.bulky { background: var(--orange); }
+
+.stop-info { flex: 1; min-width: 0; }
+.stop-name { font-size: 13px; font-weight: 500; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stop-addr { font-size: 11.5px; color: var(--gray-500); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stop-code { font-size: 10.5px; color: var(--gray-400); margin-top: 2px; font-family: 'DM Mono', monospace; }
+.stop-tags { display: flex; gap: 4px; margin-top: 3px; flex-wrap: wrap; }
+
+.tag {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; padding: 1px 6px;
+  border-radius: 20px; font-weight: 500;
+}
+.tag-geo { background: var(--success-light); color: var(--success); }
+.tag-err { background: var(--danger-light); color: var(--danger); }
+.tag-pending { background: var(--warning-light); color: var(--warning); }
+.tag-commercial { background: var(--success-light); color: var(--success); border: 1px solid #bbf7d0; }
+.tag-bulky { background: var(--orange-light); color: var(--orange); border: 1px solid #fed7aa; }
+.tag-nolat { background: var(--warning-light); color: var(--warning); }
+
+.stop-actions { display: flex; gap: 3px; opacity: 0; transition: opacity .12s; margin-top: 1px; flex-shrink: 0; }
+.stop-card:hover .stop-actions { opacity: 1; }
+.sab {
+  width: 24px; height: 24px; border: none; background: transparent;
+  cursor: pointer; border-radius: 5px; color: var(--gray-400);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; transition: all .1s;
+}
+.sab:hover { background: var(--gray-200); color: var(--gray-700); }
+.sab.del:hover { background: var(--danger-light); color: var(--danger); }
+.sab.com:hover { background: var(--success-light); color: var(--success); }
+.sab.bul:hover { background: var(--orange-light); color: var(--orange); }
+
+/* ── EMPTY STATE ── */
+.empty-state {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 32px 24px; text-align: center; gap: 8px;
+  color: var(--gray-400);
+}
+.empty-state i { font-size: 34px; margin-bottom: 4px; }
+.empty-state strong { color: var(--gray-600); font-size: 14px; }
+.empty-state p { font-size: 13px; line-height: 1.5; max-width: 260px; }
+
+/* ── SIDEBAR BOTTOM ── */
+.sidebar-bottom {
+  padding: 10px 14px;
+  border-top: 1px solid var(--gray-200);
+  display: flex; gap: 7px;
+}
+
+/* ── MAP AREA ── */
+.map-area { flex: 1; position: relative; overflow: hidden; }
+#map { width: 100%; height: 100%; }
+
+/* ── MAP OVERLAYS ── */
+.map-overlay { position: absolute; z-index: 10; }
+.map-top-right { top: 12px; right: 12px; display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+.map-top-left { top: 12px; left: 12px; }
+
+.map-card {
+  background: #fff; border-radius: var(--radius-lg);
+  box-shadow: var(--shadow); padding: 12px 14px; min-width: 200px;
+}
+.map-card-title {
+  font-size: 10.5px; font-weight: 600; color: var(--gray-500);
+  text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px;
+  display: flex; align-items: center; gap: 5px;
+}
+.map-stat { display: flex; justify-content: space-between; align-items: baseline; }
+.map-stat-val { font-size: 20px; font-weight: 600; color: var(--gray-900); font-family: 'DM Mono', monospace; }
+.map-stat-unit { font-size: 12px; color: var(--gray-500); }
+.map-divider { height: 1px; background: var(--gray-100); margin: 7px 0; }
+.map-sub { font-size: 12px; color: var(--gray-500); display: flex; align-items: center; gap: 5px; }
+
+/* Legend */
+.map-legend { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px 12px; }
+.legend-row { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--gray-600); margin-bottom: 5px; }
+.legend-row:last-child { margin-bottom: 0; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+
+/* ── TOAST ── */
+.toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 7px; z-index: 9999; }
+.toast {
+  background: var(--gray-900); color: #fff;
+  padding: 9px 14px; border-radius: var(--radius);
+  font-size: 13px; box-shadow: var(--shadow-lg);
+  display: flex; align-items: center; gap: 8px;
+  animation: slideIn .2s ease; max-width: 300px;
+}
+.toast.success { background: var(--success); }
+.toast.warning { background: var(--warning); }
+.toast.error { background: var(--danger); }
+@keyframes slideIn { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ── MODAL ── */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.modal-bg.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: #fff; border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
+  padding: 22px; width: 460px; max-width: 95vw;
+  transform: scale(.96); transition: transform .2s;
+}
+.modal-bg.open .modal { transform: scale(1); }
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 14px; color: var(--gray-900); }
+.modal-footer { display: flex; justify-content: flex-end; gap: 7px; margin-top: 18px; }
+
+/* ── LOADING OVERLAY ── */
+.loading-overlay {
+  position: absolute; inset: 0; z-index: 50;
+  background: rgba(255,255,255,.88);
+  display: none; align-items: center; justify-content: center;
+  flex-direction: column; gap: 12px;
+}
+.loading-overlay.show { display: flex; }
+.spinner {
+  width: 26px; height: 26px;
+  border: 3px solid rgba(29,107,243,.15);
+  border-top-color: var(--brand);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; color: var(--gray-600); font-weight: 500; }
+
+/* ── MODE BADGE on map ── */
+.mode-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--radius);
+  font-size: 12px; font-weight: 600;
+  box-shadow: var(--shadow);
+}
+.mode-badge.geo { background: var(--brand-light); color: var(--brand); border: 1px solid #bfdbfe; }
+.mode-badge.comercial { background: var(--success-light); color: var(--success); border: 1px solid #bbf7d0; }
+.mode-badge.volumoso { background: var(--orange-light); color: var(--orange); border: 1px solid #fed7aa; }
+
+/* ── BULKY SCANNER PANEL ── */
+.scan-panel {
+  background: var(--orange-light);
+  border-top: 2px solid var(--orange);
+  padding: 10px 14px;
+  display: none;
+}
+.scan-panel.show { display: block; }
+.scan-input-row { display: flex; gap: 7px; margin-top: 6px; }
+.scan-input {
+  flex: 1; padding: 8px 10px;
+  border: 1px solid #fed7aa; border-radius: var(--radius);
+  font-family: 'DM Mono', monospace; font-size: 13px;
+  background: #fff; outline: none;
+}
+.scan-input:focus { border-color: var(--orange); box-shadow: 0 0 0 3px rgba(234,88,12,.12); }
+.scan-title { font-size: 12px; font-weight: 600; color: var(--orange); display: flex; align-items: center; gap: 5px; }
+
+/* ── MULTI-PACKAGE STOP ── */
+.stop-pkg-count {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: var(--brand); color: #fff;
+  font-size: 10px; font-weight: 600;
+  padding: 1px 7px; border-radius: 20px;
+  font-family: 'DM Mono', monospace;
+}
+.stop-codes-list {
+  font-size: 10px; color: var(--gray-400);
+  font-family: 'DM Mono', monospace; margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 220px;
+}
+
+/* ── QR SCANNER MODAL ── */
+.qr-modal-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.85);
+  z-index: 2000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+.qr-modal-bg.open { opacity: 1; pointer-events: all; }
+.qr-modal {
+  background: #0f0f0f; border-radius: 18px; overflow: hidden;
+  width: 360px; max-width: 96vw;
+  box-shadow: 0 30px 80px rgba(0,0,0,.6);
+  transform: scale(.95) translateY(8px); transition: transform .22s;
+}
+.qr-modal-bg.open .qr-modal { transform: scale(1) translateY(0); }
+.qr-modal-header {
+  padding: 13px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid #222;
+}
+.qr-modal-title { color: #fff; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+.qr-modal-title i { color: var(--brand); }
+.qr-video-wrap { position: relative; background: #000; aspect-ratio: 4/3; overflow: hidden; }
+#qr-video { width: 100%; height: 100%; object-fit: cover; display: block; }
+#qr-canvas { display: none; }
+.qr-viewfinder {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.qr-vf-inner {
+  width: 62%; aspect-ratio: 1;
+  border: 2px solid rgba(29,107,243,.7);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0,0,0,.42);
+  position: relative;
+}
+.qr-vf-inner::before, .qr-vf-inner::after,
+.qr-vf-inner span::before, .qr-vf-inner span::after {
+  content: ''; position: absolute; width: 20px; height: 20px; border-color: #fff; border-style: solid;
+}
+.qr-vf-inner::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 6px 0 0 0; }
+.qr-vf-inner::after  { top: -2px; right: -2px; border-width: 3px 3px 0 0; border-radius: 0 6px 0 0; }
+.qr-vf-inner span::before { bottom: -2px; left: -2px; border-width: 0 0 3px 3px; border-radius: 0 0 0 6px; }
+.qr-vf-inner span::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 6px 0; }
+.qr-scan-line {
+  position: absolute; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--brand), transparent);
+  animation: qrScanAnim 2s ease-in-out infinite;
+  top: 0;
+}
+@keyframes qrScanAnim { 0%,100% { top: 5%; opacity: .8; } 50% { top: 90%; opacity: 1; } }
+.qr-status {
+  padding: 10px 16px 6px; color: var(--gray-400);
+  font-size: 12px; text-align: center; background: #0f0f0f; min-height: 36px;
+}
+.qr-divider { height: 1px; background: #222; margin: 0 16px; }
+.qr-manual-label { font-size: 10px; color: #555; padding: 8px 16px 4px; text-transform: uppercase; letter-spacing: .5px; font-weight: 600; }
+.qr-manual-row { display: flex; gap: 7px; padding: 0 16px 16px; }
+.qr-manual-input {
+  flex: 1; padding: 8px 10px;
+  background: #1a1a1a; border: 1px solid #333; border-radius: var(--radius);
+  color: #fff; font-family: 'DM Mono', monospace; font-size: 13px; outline: none;
+}
+.qr-manual-input:focus { border-color: var(--brand); }
+.qr-manual-input::placeholder { color: #444; }
+
+/* ── QR RESULT CARD ── */
+.qr-result-bg {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  z-index: 3000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+.qr-result-bg.open { opacity: 1; pointer-events: all; }
+.qr-result-card {
+  background: #fff; border-radius: 18px;
+  width: 340px; max-width: 95vw;
+  box-shadow: 0 24px 70px rgba(0,0,0,.32);
+  overflow: hidden;
+  transform: translateY(12px) scale(.96); transition: transform .2s;
+}
+.qr-result-bg.open .qr-result-card { transform: translateY(0) scale(1); }
+.qr-result-header {
+  padding: 16px 18px; display: flex; align-items: center; gap: 12px;
+  background: var(--brand); /* overridden by JS */
+}
+.qr-result-stop-num {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(255,255,255,.22);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 700;
+  font-family: 'DM Mono', monospace; color: #fff; flex-shrink: 0;
+}
+.qr-result-header-info { flex: 1; color: #fff; }
+.qr-result-stop-label { font-size: 10.5px; opacity: .75; text-transform: uppercase; letter-spacing: .5px; }
+.qr-result-stop-name { font-size: 15px; font-weight: 600; line-height: 1.25; }
+.qr-result-body { padding: 16px 18px 6px; }
+.qr-result-addr { font-size: 12.5px; color: var(--gray-600); margin-bottom: 14px; display: flex; align-items: flex-start; gap: 6px; }
+.qr-result-addr i { color: var(--gray-400); margin-top: 2px; flex-shrink: 0; }
+.qr-result-pkg-row {
+  background: var(--brand-light); border: 1px solid #bfdbfe;
+  border-radius: var(--radius); padding: 12px 14px;
+  display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+}
+.qr-result-pkg-fraction { display: flex; align-items: baseline; gap: 4px; }
+.qr-result-pkg-num { font-size: 34px; font-weight: 700; color: var(--brand); font-family: 'DM Mono', monospace; line-height: 1; }
+.qr-result-pkg-sep { font-size: 18px; color: var(--gray-400); font-weight: 300; }
+.qr-result-pkg-total { font-size: 22px; font-weight: 600; color: var(--gray-500); font-family: 'DM Mono', monospace; }
+.qr-result-pkg-label { font-size: 11.5px; color: var(--gray-500); margin-top: 2px; }
+.qr-result-codes {
+  font-size: 10px; color: var(--gray-400); font-family: 'DM Mono', monospace;
+  margin-bottom: 8px; line-height: 1.7;
+  word-break: break-all;
+}
+.qr-result-code-scanned { color: var(--brand); font-weight: 700; background: var(--brand-light); border-radius: 3px; padding: 0 3px; }
+.qr-result-footer { padding: 8px 18px 16px; display: flex; gap: 7px; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo" onclick="toggleSidebar()" style="cursor:pointer" title="Abrir/fechar painel">
+    <div class="logo-icon"><i class="fas fa-route"></i></div>
+    Copiloto de Rotas
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" id="btn-qr" onclick="openQRScanner()" title="Bipar QR Code do pacote" style="display:none">
+      <i class="fas fa-qrcode"></i> Bipar QR
+    </button>
+    <button class="btn btn-secondary btn-sm" onclick="clearAll()"><i class="fas fa-trash"></i> Limpar</button>
+    <button class="btn btn-primary btn-sm" id="btn-optimize" onclick="optimizeRoute()" disabled>
+      <i class="fas fa-bolt"></i> Otimizar Rota
+    </button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-top">
+
+      <!-- ORIGIN -->
+      <div>
+        <div class="origin-label"><i class="fas fa-home"></i> <span>Ponto de partida</span></div>
+        <div class="input-row">
+          <div class="input-wrap" style="flex:1">
+            <i class="fas fa-map-marker-alt icon-left" style="color:var(--success)"></i>
+            <input type="text" id="origin-input" placeholder="Ex: Av. Paulista, 1578, São Paulo" oninput="origin=null">
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="geocodeOrigin()" title="Buscar ponto de partida">
+            <i class="fas fa-search-location"></i>
+          </button>
+        </div>
+        <div id="origin-status" style="display:none; font-size:11px; margin-top:4px;"></div>
+      </div>
+
+      <!-- UPLOAD -->
+      <div class="upload-section">
+        <div class="upload-label"><i class="fas fa-file-excel" style="color:#16A34A;margin-right:4px"></i> Importar planilha</div>
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" style="display:none" onchange="handleFileSelect(event)">
+          <div class="upload-zone-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+          <div class="upload-zone-text" id="upload-text">Clique ou arraste o arquivo aqui</div>
+          <div class="upload-zone-sub" id="upload-sub">.xlsx, .xls ou .csv — planilha da Shopee/Correios</div>
+        </div>
+      </div>
+
+      <!-- OPTIMIZE MODE -->
+      <div class="mode-section">
+        <div class="mode-label"><i class="fas fa-sliders-h" style="margin-right:4px"></i> Modo de otimização</div>
+        <div class="mode-pills">
+          <div class="mode-pill geo active" onclick="setMode('geo')" title="Rota geográfica">
+            <div class="mode-pill-icon">🗺️</div>
+            <span class="mode-pill-name">Geográfica</span>
+          </div>
+          <div class="mode-pill comercial" onclick="setMode('comercial')" title="Prioridade comercial">
+            <div class="mode-pill-icon">🏪</div>
+            <span class="mode-pill-name">Comercial</span>
+          </div>
+          <div class="mode-pill volumoso" onclick="setMode('volumoso')" title="Volumoso / Laranja">
+            <div class="mode-pill-icon">📦</div>
+            <span class="mode-pill-name">Volumoso</span>
+          </div>
+        </div>
+        <div class="mode-desc" id="mode-desc">
+          Entrega na sequência das ruas — evita passar duas vezes pelo mesmo trecho. Máxima economia de combustível.
+        </div>
+      </div>
+    </div>
+
+    <!-- BULKY SCANNER (visible only in volumoso mode) -->
+    <div class="scan-panel" id="scan-panel">
+      <div class="scan-title"><i class="fas fa-barcode"></i> Bipe os pacotes volumosos / laranjas</div>
+      <div class="scan-input-row">
+        <input type="text" class="scan-input" id="scan-input" placeholder="Código do pacote (SPX TN)..." onkeydown="handleScan(event)">
+        <button class="btn btn-sm" style="background:var(--orange);color:#fff" onclick="confirmScan()">
+          <i class="fas fa-check"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- STATS BAR -->
+    <div class="stats-bar" id="stats-bar" style="display:none">
+      <div class="stat">
+        <div class="stat-val" id="stat-stops">0</div>
+        <div class="stat-label">Endereços</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-packages">0</div>
+        <div class="stat-label">Pacotes</div>
+
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-km">—</div>
+        <div class="stat-label">Dist. total</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-time">—</div>
+        <div class="stat-label">Tempo est.</div>
+      </div>
+    </div>
+
+    <!-- PROGRESS -->
+    <div class="progress-bar" id="progress-bar" style="display:none">
+      <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+    </div>
+
+    <!-- ROUTE LIST -->
+    <div id="route-list" class="route-list">
+      <div class="empty-state" id="empty-state">
+        <i class="fas fa-file-upload"></i>
+        <strong>Nenhuma parada ainda</strong>
+        <p>Importe a planilha da rota (.xlsx) e defina o ponto de partida para começar.</p>
+      </div>
+    </div>
+
+    <!-- BOTTOM -->
+    <div class="sidebar-bottom" id="sidebar-bottom" style="display:none">
+      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="exportRoute()">
+        <i class="fas fa-download"></i> Exportar
+      </button>
+      <button class="btn btn-success btn-sm" style="flex:1" onclick="openInMaps()">
+        <i class="fab fa-google"></i> Abrir no Maps
+      </button>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div class="map-area" id="map-area">
+    <div id="map"></div>
+    <button class="sidebar-expand-btn" id="sidebar-expand-btn" onclick="expandSidebar()" title="Abrir painel">
+      <i class="fas fa-list-ul"></i>
+    </button>
+
+    <div class="loading-overlay" id="map-loading">
+      <div class="spinner"></div>
+      <div class="loading-text" id="loading-text">Aguarde...</div>
+    </div>
+
+    <!-- Top-right info -->
+    <div class="map-overlay map-top-right" id="map-info" style="display:none">
+      <div id="mode-map-badge" class="mode-badge geo"><i class="fas fa-route"></i> Rota Geográfica</div>
+      <div class="map-card">
+        <div class="map-card-title"><i class="fas fa-bolt" style="color:var(--brand)"></i> Rota otimizada</div>
+        <div class="map-stat">
+          <span class="map-stat-val" id="map-total-km">0</span>
+          <span class="map-stat-unit">km</span>
+        </div>
+        <div class="map-divider"></div>
+        <div class="map-sub"><i class="fas fa-clock"></i> <span id="map-total-time">—</span></div>
+        <div class="map-divider"></div>
+        <div class="map-sub" id="map-commercial-info" style="display:none">
+          <i class="fas fa-store" style="color:var(--success)"></i>
+          <span id="map-commercial-text">—</span>
+        </div>
+        <div class="map-sub" id="map-bulky-info" style="display:none">
+          <i class="fas fa-box" style="color:var(--orange)"></i>
+          <span id="map-bulky-text">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="map-overlay" style="bottom:28px;left:12px;" id="map-legend" style="display:none">
+      <div class="map-legend" id="legend-box" style="display:none">
+        <div class="legend-row"><div class="legend-dot" style="background:#16A34A"></div> Ponto de partida</div>
+        <div class="legend-row" id="legend-commercial" style="display:none"><div class="legend-dot" style="background:#16A34A;border:2px solid #fff;box-shadow:0 0 0 1.5px #16A34A"></div> Comércio (prioridade)</div>
+        <div class="legend-row" id="legend-bulky" style="display:none"><div class="legend-dot" style="background:#EA580C"></div> Volumoso / Laranja 📦</div>
+        <div class="legend-row"><div class="legend-dot" style="background:#1D6BF3"></div> Parada normal</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toasts"></div>
+
+<!-- QR SCANNER MODAL -->
+<div class="qr-modal-bg" id="qr-modal-bg" onclick="if(event.target===this)closeQRScanner()">
+  <div class="qr-modal">
+    <div class="qr-modal-header">
+      <div class="qr-modal-title"><i class="fas fa-qrcode"></i> Bipar Pacote (QR Code)</div>
+      <button class="btn btn-ghost btn-sm" onclick="closeQRScanner()" style="color:#aaa;padding:4px 8px"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="qr-video-wrap">
+      <video id="qr-video" playsinline muted autoplay></video>
+      <canvas id="qr-canvas"></canvas>
+      <div class="qr-viewfinder">
+        <div class="qr-vf-inner"><span></span><div class="qr-scan-line"></div></div>
+      </div>
+    </div>
+    <div class="qr-status" id="qr-status">Iniciando câmera...</div>
+    <div class="qr-divider"></div>
+    <div class="qr-manual-label">ou digite o código</div>
+    <div class="qr-manual-row">
+      <input type="text" class="qr-manual-input" id="qr-manual-input" placeholder="BR... ou SPX..." onkeydown="handleQRManual(event)" autocapitalize="characters">
+      <button class="btn btn-sm" style="background:var(--brand);color:#fff;flex-shrink:0" onclick="submitQRManual()"><i class="fas fa-search"></i></button>
+    </div>
+  </div>
+</div>
+
+<!-- QR RESULT MODAL -->
+<div class="qr-result-bg" id="qr-result-bg" onclick="if(event.target===this)closeQRResult()">
+  <div class="qr-result-card">
+    <div class="qr-result-header" id="qr-result-header">
+      <div class="qr-result-stop-num" id="qr-result-num">1</div>
+      <div class="qr-result-header-info">
+        <div class="qr-result-stop-label">Parada</div>
+        <div class="qr-result-stop-name" id="qr-result-name">—</div>
+      </div>
+    </div>
+    <div class="qr-result-body">
+      <div class="qr-result-addr"><i class="fas fa-map-marker-alt"></i><span id="qr-result-addr">—</span></div>
+      <div class="qr-result-pkg-row">
+        <div>
+          <div class="qr-result-pkg-fraction">
+            <div class="qr-result-pkg-num" id="qr-result-pkg-num">1</div>
+            <div class="qr-result-pkg-sep">de</div>
+            <div class="qr-result-pkg-total" id="qr-result-pkg-of">1</div>
+          </div>
+          <div class="qr-result-pkg-label" id="qr-result-pkg-label">pacote neste endereço</div>
+        </div>
+      </div>
+      <div class="qr-result-codes" id="qr-result-codes"></div>
+    </div>
+    <div class="qr-result-footer">
+      <button class="btn btn-secondary btn-sm" style="flex:1" onclick="closeQRResult();openQRScanner()"><i class="fas fa-qrcode"></i> Bipar próximo</button>
+      <button class="btn btn-primary btn-sm" style="flex:1" onclick="closeQRResult()"><i class="fas fa-check"></i> OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- SheetJS for Excel parsing -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Leaflet -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<!-- jsQR -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let stops = [];
+// stop shape: { id, code, name, address, bairro, city, lat, lng, geocoded, error, isCommercial, isBulky, noCoords }
+let origin = null;
+let map = null;
+let markers = [];
+let routeLine = null;
+let routeLine2 = null;
+let currentMode = 'geo';
+let totalDistKm = 0;
+
+const MODE_INFO = {
+  geo: {
+    desc: 'Entrega na sequência das ruas — evita passar duas vezes pelo mesmo trecho. Máxima economia de combustível.',
+    badge: '🗺️ Rota Geográfica',
+    badgeClass: 'geo',
+    mapIcon: 'fas fa-route'
+  },
+  comercial: {
+    desc: 'Prioriza comércios identificados (Google + marcação manual). Entrega-os primeiro em rota geográfica, depois continua com as residências a partir da última parada comercial.',
+    badge: '🏪 Modo Comercial',
+    badgeClass: 'comercial',
+    mapIcon: 'fas fa-store'
+  },
+  volumoso: {
+    desc: 'Bipe os pacotes volumosos / laranjas (Shopee priority) para marcá-los. Eles ficam destacados no mapa com 📦 e você escolhe quando entregar durante a rota.',
+    badge: '📦 Volumoso / Laranja',
+    badgeClass: 'volumoso',
+    mapIcon: 'fas fa-box'
+  }
+};
+
+// ═══════════════════════════════════════════
+// ADDRESS NORMALIZATION & DEDUP
+// ═══════════════════════════════════════════
+function normalizeAddress(addr) {
+  if (!addr) return '';
+  return addr
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove accents
+    .replace(/\bavenida\b/g, 'av').replace(/\bav\.\s*/g, 'av ')
+    .replace(/\brua\b/g, 'r').replace(/\br\.\s*/g, 'r ')
+    .replace(/\bapartamento\b/g, 'apto').replace(/\bapartamento\s*/g, 'apto ')
+    .replace(/\bapto\.\s*/g, 'apto ').replace(/\bap\.\s*/g, 'apto ').replace(/\bap\b\s*/g, 'apto ')
+    .replace(/\bnumero\b/g, 'n').replace(/\bnº\s*/g, 'n').replace(/\bn°\s*/g, 'n')
+    .replace(/\bsem numero\b/g, 'sn').replace(/\bs\/n\b/g, 'sn')
+    .replace(/[,.\-\/\\]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function findStopByCode(code) {
+  const upper = code.toUpperCase().trim();
+  return stops.find(s =>
+    s.packages && s.packages.some(p => {
+      const pc = (p.code || '').toUpperCase();
+      return pc === upper || pc.includes(upper) || upper.includes(pc);
+    })
+  );
+}
+
+function getPackageIndex(stop, code) {
+  const upper = code.toUpperCase().trim();
+  return (stop.packages || []).findIndex(p => {
+    const pc = (p.code || '').toUpperCase();
+    return pc === upper || pc.includes(upper) || upper.includes(pc);
+  });
+}
+
+// ═══════════════════════════════════════════
+// MAP INIT
+// ═══════════════════════════════════════════
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([-23.46, -46.52], 13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© OpenStreetMap © CARTO', maxZoom: 19
+  }).addTo(map);
+  L.control.zoom({ position: 'bottomright' }).addTo(map);
+  // Click on map to collapse sidebar
+  map.on('click', function() {
+    if (!document.querySelector('.sidebar').classList.contains('collapsed')) {
+      collapseSidebar();
+    }
+  });
+}
+initMap();
+
+// ═══════════════════════════════════════════
+// SIDEBAR COLLAPSE / EXPAND
+// ═══════════════════════════════════════════
+function collapseSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const btn = document.getElementById('sidebar-expand-btn');
+  sidebar.classList.add('collapsed');
+  btn.classList.add('visible');
+  setTimeout(() => map.invalidateSize(), 310);
+}
+function expandSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const btn = document.getElementById('sidebar-expand-btn');
+  sidebar.classList.remove('collapsed');
+  btn.classList.remove('visible');
+  setTimeout(() => map.invalidateSize(), 310);
+}
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar.classList.contains('collapsed')) expandSidebar();
+  else collapseSidebar();
+}
+
+// ═══════════════════════════════════════════
+// MODE
+// ═══════════════════════════════════════════
+function setMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-pill').forEach(p => p.classList.remove('active'));
+  document.querySelector('.mode-pill.' + mode).classList.add('active');
+  document.getElementById('mode-desc').textContent = MODE_INFO[mode].desc;
+
+  // Show/hide scan panel
+  const scanPanel = document.getElementById('scan-panel');
+  if (mode === 'volumoso') {
+    scanPanel.classList.add('show');
+    document.getElementById('scan-input').focus();
+  } else {
+    scanPanel.classList.remove('show');
+  }
+
+  // Auto-reoptimize if route already computed
+  if (stops.length > 0 && totalDistKm > 0) {
+    optimizeRoute();
+  } else if (stops.length > 0) {
+    renderList();
+    refreshMap();
+  }
+}
+
+// ═══════════════════════════════════════════
+// FILE UPLOAD
+// ═══════════════════════════════════════════
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.add('dragover');
+}
+function handleDragLeave(e) {
+  document.getElementById('upload-zone').classList.remove('dragover');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) processFile(file);
+}
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processFile(file);
+}
+
+function processFile(file) {
+  const zone = document.getElementById('upload-zone');
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx','xls','csv'].includes(ext)) {
+    toast('Formato não suportado. Use .xlsx, .xls ou .csv', 'error');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      let rows = [];
+      if (ext === 'csv') {
+        // Parse CSV manually
+        const text = new TextDecoder('utf-8').decode(e.target.result);
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) { toast('CSV vazio ou sem dados', 'error'); return; }
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g,''));
+        rows = lines.slice(1).map(line => {
+          const vals = line.split(',').map(v => v.trim().replace(/"/g,''));
+          const obj = {};
+          headers.forEach((h,i) => obj[h] = vals[i] || '');
+          return obj;
+        });
+      } else {
+        const wb = XLSX.read(e.target.result, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      }
+
+      parseRows(rows, file.name);
+
+      zone.classList.add('has-file');
+      document.getElementById('upload-text').textContent = '✓ ' + file.name;
+      document.getElementById('upload-sub').textContent = rows.length + ' linhas carregadas';
+    } catch(err) {
+      toast('Erro ao ler arquivo: ' + err.message, 'error');
+    }
+  };
+  if (ext === 'csv') {
+    reader.readAsArrayBuffer(file);
+  } else {
+    reader.readAsArrayBuffer(file);
+  }
+}
+
+// ─────────────────────────────────────────
+// Parse rows from spreadsheet
+// Supports Shopee/Correios format AND generic format
+// ─────────────────────────────────────────
+function parseRows(rows, filename) {
+  if (!rows || rows.length === 0) { toast('Planilha vazia', 'warning'); return; }
+
+  const sample = rows[0];
+  const keys = Object.keys(sample).map(k => k.toLowerCase().trim());
+
+  // Detect Shopee/AT format
+  const isShopeeFormat = keys.some(k => k.includes('spx') || k.includes('at id') || k.includes('destination address'));
+  // Detect generic address format
+  const hasAddress = keys.some(k => k.includes('address') || k.includes('endere') || k.includes('destino'));
+  const hasLatLng = keys.some(k => k.includes('lat')) && keys.some(k => k.includes('lon') || k.includes('lng'));
+
+  function getVal(row, ...candidates) {
+    for (const c of candidates) {
+      const k = Object.keys(row).find(k => k.toLowerCase().trim().includes(c));
+      if (k && row[k] !== '' && row[k] !== undefined && row[k] !== null) return String(row[k]).trim();
+    }
+    return '';
+  }
+
+  const rawStops = [];
+  let skipped = 0;
+
+  for (const row of rows) {
+    const code = getVal(row, 'spx tn', 'spx', 'tn', 'código', 'codigo', 'tracking', 'rastreio', 'id');
+    const addr = getVal(row, 'destination address', 'endere', 'address', 'destino', 'rua', 'logradouro');
+    const bairro = getVal(row, 'bairro', 'neighborhood', 'district');
+    const city = getVal(row, 'city', 'cidade', 'municipio');
+    const latRaw = getVal(row, 'latitude', 'lat');
+    const lngRaw = getVal(row, 'longitude', 'lng', 'lon');
+
+    if (!addr && !code) { skipped++; continue; }
+
+    const lat = parseFloat(latRaw) || 0;
+    const lng = parseFloat(lngRaw) || 0;
+    const hasValidCoords = lat !== 0 && lng !== 0 && !isNaN(lat) && !isNaN(lng);
+
+    const nameParts = addr.split(',');
+    const name = nameParts[0].trim() || bairro || code || 'Parada';
+    const fullAddr = addr + (bairro ? ', ' + bairro : '') + (city ? ', ' + city : '');
+
+    rawStops.push({
+      id: Date.now() + Math.random(),
+      code: code || '—',
+      name: name,
+      address: addr || code,
+      fullAddress: fullAddr,
+      bairro: bairro,
+      city: city,
+      lat: hasValidCoords ? lat : null,
+      lng: hasValidCoords ? lng : null,
+      geocoded: hasValidCoords,
+      noCoords: !hasValidCoords,
+      error: false,
+      isCommercial: false,
+      isBulky: false,
+    });
+  }
+
+  // ── Group packages by normalized address ──
+  const addressMap = new Map();
+  for (const s of rawStops) {
+    const key = normalizeAddress(s.fullAddress || s.address);
+    if (addressMap.has(key)) {
+      addressMap.get(key).packages.push({ code: s.code });
+    } else {
+      s.packages = [{ code: s.code }];
+      addressMap.set(key, s);
+    }
+  }
+
+  const newStops = Array.from(addressMap.values()).map(s => {
+    s.packageCount = s.packages.length;
+    return s;
+  });
+
+  if (newStops.length === 0) {
+    toast('Nenhuma parada válida encontrada na planilha', 'warning');
+    return;
+  }
+
+  stops = newStops;
+
+  // Show QR button
+  document.getElementById('btn-qr').style.display = '';
+
+  const totalPkgs = stops.reduce((s, st) => s + (st.packageCount || 1), 0);
+  const grouped = totalPkgs - stops.length;
+
+  // Geocode rows with missing coords
+  const needsGeo = stops.filter(s => s.noCoords);
+  if (needsGeo.length > 0) {
+    toast(`${stops.length} endereços · ${totalPkgs} pacotes${grouped > 0 ? ` (${grouped} agrupados)` : ''} — geocodificando sem GPS...`, 'warning');
+    geocodeMissing(needsGeo);
+  } else {
+    toast(`${stops.length} endereços · ${totalPkgs} pacotes${grouped > 0 ? ` · ${grouped} agrupados 📦` : ''} carregados!`, 'success');
+  }
+
+  renderList();
+  refreshMap();
+  updateStats();
+  updateOptimizeBtn();
+
+  // Auto-detect commercials via heuristic
+  autoDetectCommercials();
+}
+
+// ─────────────────────────────────────────
+// Auto detect commercials from address keywords
+// ─────────────────────────────────────────
+function autoDetectCommercials() {
+  const commercialKeywords = [
+    'apto', 'apt', 'ap ', 'ap.', 'bloco', 'torre', 'sala ', 'andar',
+    'sobrado', 'casa', 'edifício', 'edificio', 'condominio', 'condomínio'
+  ];
+  const probablyCommercialKeywords = [
+    'loja', 'mercado', 'farmácia', 'farmacia', 'supermercado', 'comercio',
+    'comércio', 'escritório', 'escritorio', 'empresa', 'ltda', 'cnpj',
+    'mei ', 'restaurante', 'bar ', 'oficina', 'auto', 'pet', 'clínica',
+    'clinica', 'salão', 'salao', 'academia', 'doces', 'suporte', 'galpao',
+    'galpão', 'portão preto campaninha', 'senai', 'novo galpao'
+  ];
+
+  let detected = 0;
+  stops.forEach(s => {
+    const addr = (s.address + ' ' + s.name + ' ' + s.bairro).toLowerCase();
+    const isRes = commercialKeywords.some(k => addr.includes(k));
+    const isCom = probablyCommercialKeywords.some(k => addr.includes(k));
+    if (isCom && !isRes) {
+      s.isCommercial = true;
+      detected++;
+    }
+  });
+
+  if (detected > 0) {
+    toast(`${detected} comércios detectados automaticamente`, 'success');
+    renderList();
+    updateStats();
+  }
+}
+
+// ═══════════════════════════════════════════
+// GEOCODE MISSING COORDS
+// ═══════════════════════════════════════════
+async function geocodeMissing(targets) {
+  document.getElementById('progress-bar').style.display = 'block';
+  showLoading(`Geocodificando ${targets.length} endereços sem GPS...`);
+
+  let done = 0;
+  for (const stop of targets) {
+    const result = await geocodeAddress(stop.fullAddress || stop.address);
+    if (result) {
+      stop.lat = result.lat;
+      stop.lng = result.lng;
+      stop.geocoded = true;
+      stop.noCoords = false;
+    } else {
+      stop.error = true;
+    }
+    done++;
+    const pct = Math.round(done / targets.length * 100);
+    document.getElementById('progress-fill').style.width = pct + '%';
+    document.getElementById('loading-text').textContent = `Geocodificando ${done}/${targets.length}...`;
+    await sleep(220);
+  }
+
+  hideLoading();
+  document.getElementById('progress-bar').style.display = 'none';
+  document.getElementById('progress-fill').style.width = '0%';
+
+  const ok = stops.filter(s => s.geocoded).length;
+  const err = stops.filter(s => s.error).length;
+  toast(`${ok} paradas no mapa${err > 0 ? ', ' + err + ' não encontradas' : ''}`, err > 0 ? 'warning' : 'success');
+
+  renderList();
+  refreshMap();
+  updateStats();
+  updateOptimizeBtn();
+}
+
+async function geocodeAddress(raw) {
+  const q = raw.trim();
+  const query = /guarulhos|são paulo|sp|campinas|santos/i.test(q) ? q : q + ', São Paulo, Brasil';
+  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`;
+  try {
+    const res = await fetch(url, { headers: { 'Accept-Language': 'pt-BR' } });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+// ═══════════════════════════════════════════
+// ORIGIN
+// ═══════════════════════════════════════════
+async function geocodeOrigin() {
+  const val = document.getElementById('origin-input').value.trim();
+  if (!val) { toast('Digite o endereço de partida', 'warning'); return; }
+
+  const st = document.getElementById('origin-status');
+  st.style.display = 'block';
+  st.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Buscando...';
+  st.style.color = 'var(--gray-500)';
+
+  const result = await geocodeAddress(val);
+  if (result) {
+    origin = { ...result, displayName: val };
+    st.innerHTML = '<i class="fas fa-check-circle" style="color:var(--success)"></i> ' + val;
+    st.style.color = 'var(--success)';
+    map.setView([result.lat, result.lng], 13);
+    refreshMap();
+    toast('Ponto de partida definido!', 'success');
+    updateOptimizeBtn();
+  } else {
+    st.innerHTML = '<i class="fas fa-exclamation-triangle" style="color:var(--danger)"></i> Não encontrado';
+    st.style.color = 'var(--danger)';
+  }
+}
+
+// ═══════════════════════════════════════════
+// BULKY SCANNER
+// ═══════════════════════════════════════════
+function handleScan(e) {
+  if (e.key === 'Enter') confirmScan();
+}
+function confirmScan() {
+  const input = document.getElementById('scan-input');
+  const code = input.value.trim().toUpperCase();
+  if (!code) return;
+
+  const stop = findStopByCode(code);
+  if (stop) {
+    stop.isBulky = !stop.isBulky;
+    toast(stop.isBulky ? `📦 ${code} marcado como volumoso/laranja` : `${code} desmarcado`, stop.isBulky ? 'warning' : '');
+    renderList();
+    refreshMap();
+    updateStats();
+  } else {
+    toast(`Código "${code}" não encontrado na rota`, 'error');
+  }
+  input.value = '';
+  input.focus();
+}
+
+// ═══════════════════════════════════════════
+// TOGGLE COMMERCIAL / BULKY from list
+// ═══════════════════════════════════════════
+function toggleCommercial(id) {
+  const s = stops.find(s => String(s.id) === String(id));
+  if (s) {
+    s.isCommercial = !s.isCommercial;
+    renderList();
+    updateStats();
+    refreshMap();
+  }
+}
+function toggleBulky(id) {
+  const s = stops.find(s => String(s.id) === String(id));
+  if (s) {
+    s.isBulky = !s.isBulky;
+    renderList();
+    updateStats();
+    refreshMap();
+  }
+}
+
+// ═══════════════════════════════════════════
+// OPTIMIZE ROUTE
+// ═══════════════════════════════════════════
+async function optimizeRoute() {
+  const geocoded = stops.filter(s => s.geocoded);
+  if (geocoded.length < 2) { toast('Adicione ao menos 2 paradas geocodificadas', 'warning'); return; }
+  if (!origin) { toast('Defina o ponto de partida primeiro', 'warning'); return; }
+
+  showLoading('Otimizando rota...');
+  await sleep(200);
+
+  if (currentMode === 'geo') {
+    runGeoOptimization(geocoded);
+  } else if (currentMode === 'comercial') {
+    runCommercialOptimization(geocoded);
+  } else if (currentMode === 'volumoso') {
+    runBulkyOptimization(geocoded);
+  }
+
+  hideLoading();
+  updateOptimizeBtn();
+}
+
+// ─────────────────────────────────────────
+// GEO: Nearest Neighbor TSP from origin
+// ─────────────────────────────────────────
+function nearestNeighbor(pts, startPt) {
+  const unvisited = [...pts];
+  const route = [];
+  let current = startPt;
+
+  while (unvisited.length > 0) {
+    let bestDist = Infinity, bestIdx = -1;
+    for (let i = 0; i < unvisited.length; i++) {
+      const d = haversine(current.lat, current.lng, unvisited[i].lat, unvisited[i].lng);
+      if (d < bestDist) { bestDist = d; bestIdx = i; }
+    }
+    if (bestIdx === -1) break;
+    route.push(unvisited[bestIdx]);
+    current = unvisited[bestIdx];
+    unvisited.splice(bestIdx, 1);
+  }
+  return route;
+}
+
+function calcRouteDistance(pts, startPt) {
+  let total = 0;
+  let prev = startPt;
+  for (const p of pts) {
+    total += haversine(prev.lat, prev.lng, p.lat, p.lng);
+    prev = p;
+  }
+  return total;
+}
+
+function runGeoOptimization(geocoded) {
+  const ordered = nearestNeighbor(geocoded, origin);
+  stops = [
+    ...ordered,
+    ...stops.filter(s => !s.geocoded)
+  ];
+  const total = calcRouteDistance(ordered, origin);
+  totalDistKm = total;
+
+  renderList();
+  refreshMap(ordered);
+  updateStats(total);
+  showMapInfo(total);
+  toast('Rota geográfica otimizada! 🗺️', 'success');
+}
+
+// ─────────────────────────────────────────
+// COMERCIAL: geo-sort commercials first, then residentials from last commercial
+// ─────────────────────────────────────────
+function runCommercialOptimization(geocoded) {
+  const commercials = geocoded.filter(s => s.isCommercial);
+  const residentials = geocoded.filter(s => !s.isCommercial);
+
+  if (commercials.length === 0) {
+    toast('Nenhum comércio marcado! Marque paradas comerciais na lista.', 'warning');
+    hideLoading();
+    return;
+  }
+
+  // Phase 1: geo-sort commercials from origin
+  const orderedCommercials = nearestNeighbor(commercials, origin);
+
+  // Phase 2: geo-sort residentials from last commercial
+  const lastCommercial = orderedCommercials[orderedCommercials.length - 1];
+  const orderedResidentials = nearestNeighbor(residentials, lastCommercial);
+
+  const fullRoute = [...orderedCommercials, ...orderedResidentials];
+  stops = [
+    ...fullRoute,
+    ...stops.filter(s => !s.geocoded)
+  ];
+
+  const total = calcRouteDistance(fullRoute, origin);
+  totalDistKm = total;
+
+  renderList();
+  refreshMap(fullRoute, orderedCommercials.length);
+  updateStats(total);
+  showMapInfo(total, orderedCommercials.length, orderedResidentials.length);
+  toast(`Modo comercial: ${orderedCommercials.length} comércios primeiro, depois ${orderedResidentials.length} residências! 🏪`, 'success');
+}
+
+// ─────────────────────────────────────────
+// VOLUMOSO: geo-sort all, highlight bulky on map
+// ─────────────────────────────────────────
+function runBulkyOptimization(geocoded) {
+  // Full geo optimization (bulky stays in route, just highlighted)
+  const ordered = nearestNeighbor(geocoded, origin);
+  stops = [
+    ...ordered,
+    ...stops.filter(s => !s.geocoded)
+  ];
+  const total = calcRouteDistance(ordered, origin);
+  totalDistKm = total;
+
+  const bulkyCount = ordered.filter(s => s.isBulky).length;
+  renderList();
+  refreshMap(ordered);
+  updateStats(total);
+  showMapInfo(total, 0, 0, bulkyCount);
+  toast(`Rota otimizada com ${bulkyCount} volumosos/laranjas destacados no mapa 📦`, 'success');
+}
+
+// ═══════════════════════════════════════════
+// OSRM ROAD ROUTING
+// Fetches real road geometry from OSRM (free, no key needed)
+// Falls back to straight polyline if request fails
+// ═══════════════════════════════════════════
+const OSRM_CHUNK = 25; // OSRM handles up to ~100 waypoints, use 25 to be safe
+
+async function drawRoadRoute(latlngs, color, weight, opacity, isPrimary) {
+  // Draw placeholder dashed line immediately while we fetch
+  const placeholder = L.polyline(latlngs, {
+    color, weight, opacity: opacity * 0.35, dashArray: '8,6'
+  }).addTo(map);
+  if (isPrimary) routeLine = placeholder; else routeLine2 = placeholder;
+
+  try {
+    // Split into overlapping chunks to avoid OSRM limits
+    let fullGeom = [];
+    for (let i = 0; i < latlngs.length - 1; i += OSRM_CHUNK - 1) {
+      const chunk = latlngs.slice(i, i + OSRM_CHUNK);
+      if (chunk.length < 2) break;
+      // OSRM expects lng,lat
+      const coords = chunk.map(p => `${p[1]},${p[0]}`).join(';');
+      const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('OSRM error');
+      const data = await res.json();
+      if (!data.routes || !data.routes[0]) throw new Error('No route');
+      const coords2 = data.routes[0].geometry.coordinates;
+      // geojson is [lng,lat], convert to [lat,lng] for Leaflet
+      const seg = coords2.map(c => [c[1], c[0]]);
+      if (fullGeom.length > 0) seg.shift(); // remove duplicate junction point
+      fullGeom = fullGeom.concat(seg);
+    }
+
+    // Remove placeholder and draw real road line
+    map.removeLayer(placeholder);
+    if (isPrimary && routeLine === placeholder) routeLine = null;
+    if (!isPrimary && routeLine2 === placeholder) routeLine2 = null;
+
+    const line = L.polyline(fullGeom, { color, weight, opacity }).addTo(map);
+    if (isPrimary) routeLine = line; else routeLine2 = line;
+
+  } catch(e) {
+    // Fallback: replace dashed placeholder with solid straight line
+    map.removeLayer(placeholder);
+    const line = L.polyline(latlngs, { color, weight, opacity }).addTo(map);
+    if (isPrimary) routeLine = line; else routeLine2 = line;
+    console.warn('OSRM fallback to straight line:', e.message);
+  }
+}
+
+// ═══════════════════════════════════════════
+// MAP RENDERING
+// ═══════════════════════════════════════════
+function refreshMap(routePts, commercialSplit) {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+  if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
+  if (routeLine2) { map.removeLayer(routeLine2); routeLine2 = null; }
+
+  const allPts = [];
+
+  // Origin marker
+  if (origin && origin.lat) {
+    const m = L.marker([origin.lat, origin.lng], { icon: createPinIcon('⌂', '#16A34A', true) })
+      .addTo(map).bindPopup('<strong>🟢 Ponto de partida</strong><br>' + origin.displayName);
+    markers.push(m);
+    allPts.push([origin.lat, origin.lng]);
+  }
+
+  // Stop markers
+  const displayStops = stops.filter(s => s.geocoded);
+  displayStops.forEach((s, i) => {
+    let color = '#1D6BF3';
+    let emoji = '';
+    if (s.isBulky) { color = '#EA580C'; emoji = '📦'; }
+    else if (s.isCommercial && currentMode === 'comercial') { color = '#16A34A'; }
+
+    const label = emoji || (i + 1);
+    const m = L.marker([s.lat, s.lng], { icon: createPinIcon(label, color, false, s.isBulky) })
+      .addTo(map)
+      .bindPopup(`
+        <strong>Parada ${i+1}: ${s.name}</strong><br>
+        <small>${s.address}</small><br>
+        ${(s.packageCount && s.packageCount > 1) ? `<small style="color:var(--brand);font-weight:600"><i class="fas fa-boxes"></i> ${s.packageCount} pacotes neste endereço</small><br>` : ''}
+        <small style="font-family:monospace;color:#6B7280">${s.packages ? s.packages.map(p=>p.code).join(' · ') : s.code}</small>
+        ${s.isCommercial ? '<br><span style="color:#16A34A;font-size:11px">🏪 Comércio</span>' : ''}
+        ${s.isBulky ? '<br><span style="color:#EA580C;font-size:11px">📦 Volumoso/Laranja</span>' : ''}
+      `);
+    markers.push(m);
+    allPts.push([s.lat, s.lng]);
+  });
+
+  // Route lines
+  if (routePts && routePts.length > 1) {
+    const allLatLngs = [
+      ...(origin ? [[origin.lat, origin.lng]] : []),
+      ...routePts.map(p => [p.lat, p.lng])
+    ];
+
+    if (commercialSplit && commercialSplit > 0 && currentMode === 'comercial') {
+      const comPts = allLatLngs.slice(0, commercialSplit + 1);
+      const resPts = allLatLngs.slice(commercialSplit);
+      drawRoadRoute(comPts, '#16A34A', 4, 0.85, true);
+      drawRoadRoute(resPts, '#1D6BF3', 3.5, 0.78, false);
+    } else {
+      const lineColor = currentMode === 'volumoso' ? '#EA580C' : '#1D6BF3';
+      drawRoadRoute(allLatLngs, lineColor, 3.5, 0.78, true);
+    }
+  } else if (allPts.length > 1) {
+    routeLine = L.polyline(allPts, { color: '#9CA3AF', weight: 2, opacity: 0.45, dashArray: '6,6' }).addTo(map);
+  }
+
+  if (allPts.length > 0) {
+    const bounds = allPts.length === 1
+      ? [[allPts[0][0]-0.01, allPts[0][1]-0.01],[allPts[0][0]+0.01, allPts[0][1]+0.01]]
+      : allPts;
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }
+
+  // Show legend
+  const legendBox = document.getElementById('legend-box');
+  if (allPts.length > 0) {
+    legendBox.style.display = 'block';
+    document.getElementById('legend-commercial').style.display =
+      (currentMode === 'comercial' && stops.some(s => s.isCommercial)) ? 'flex' : 'none';
+    document.getElementById('legend-bulky').style.display =
+      (stops.some(s => s.isBulky)) ? 'flex' : 'none';
+  }
+}
+
+function createPinIcon(label, color, isOrigin, isBulky) {
+  const size = isOrigin ? [34, 42] : [30, 38];
+  const anchor = isOrigin ? [17, 42] : [15, 38];
+  const fontSize = typeof label === 'number' && label > 9 ? '10' : '12';
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size[0]}" height="${size[1]}" viewBox="0 0 ${size[0]} ${size[1]}">
+    <path d="M${size[0]/2} 0C${size[0]*0.22} 0 0 ${size[0]*0.22} 0 ${size[0]/2}c0 ${size[0]*0.33} ${size[0]/2} ${size[1]-size[0]/2} ${size[0]/2} ${size[1]-size[0]/2}S${size[0]} ${size[0]/2+size[0]*0.33} ${size[0]} ${size[0]/2}C${size[0]} ${size[0]*0.22} ${size[0]*0.78} 0 ${size[0]/2} 0z" fill="${color}"/>
+    ${isBulky
+      ? `<text x="${size[0]/2}" y="${size[0]/2+5}" text-anchor="middle" font-size="14" font-family="serif">${label}</text>`
+      : `<text x="${size[0]/2}" y="${size[0]/2+4}" text-anchor="middle" fill="white" font-size="${fontSize}" font-weight="600" font-family="DM Sans,sans-serif">${label}</text>`
+    }
+  </svg>`;
+
+  return L.divIcon({ html: svg, className: '', iconSize: size, iconAnchor: anchor, popupAnchor: [0, -34] });
+}
+
+// ═══════════════════════════════════════════
+// RENDER LIST
+// ═══════════════════════════════════════════
+function renderList() {
+  const el = document.getElementById('route-list');
+  const empty = document.getElementById('empty-state');
+
+  if (stops.length === 0) {
+    empty.style.display = '';
+    document.getElementById('stats-bar').style.display = 'none';
+    document.getElementById('sidebar-bottom').style.display = 'none';
+    el.innerHTML = '';
+    el.appendChild(empty);
+    return;
+  }
+
+  empty.style.display = 'none';
+  document.getElementById('stats-bar').style.display = '';
+  document.getElementById('sidebar-bottom').style.display = '';
+
+  const geocodedStops = stops.filter(s => s.geocoded);
+  const noGeoStops = stops.filter(s => !s.geocoded);
+
+  let html = `<div class="section-header">
+    <span>Paradas <span style="background:var(--brand-light);color:var(--brand);border-radius:20px;padding:1px 8px;font-size:10px">${stops.length}</span></span>
+    <button class="btn btn-ghost btn-sm" onclick="optimizeRoute()" style="font-size:10px;padding:2px 7px;gap:3px"><i class="fas fa-bolt"></i> Reotimizar</button>
+  </div>`;
+
+  geocodedStops.forEach((s, i) => {
+    const numClass = s.isBulky ? 'bulky' : (s.isCommercial && currentMode === 'comercial') ? 'commercial' : (i === geocodedStops.length - 1 ? 'last' : '');
+    const cardClass = s.isBulky ? ' is-bulky' : (s.isCommercial ? ' is-commercial' : '');
+
+    const tags = [];
+    if (s.isCommercial) tags.push(`<span class="tag tag-commercial"><i class="fas fa-store"></i> Comércio</span>`);
+    if (s.isBulky) tags.push(`<span class="tag tag-bulky"><i class="fas fa-box"></i> Volumoso/🟠</span>`);
+
+    const pkgBadge = (s.packageCount && s.packageCount > 1)
+      ? `<span class="stop-pkg-count"><i class="fas fa-boxes"></i> ${s.packageCount} pacotes</span>`
+      : '';
+
+    const codesDisplay = (s.packages && s.packageCount > 1)
+      ? `<div class="stop-codes-list">${s.packages.map(p => p.code).join(' · ')}</div>`
+      : `<div class="stop-code">${s.packages ? s.packages[0].code : (s.code || '—')}</div>`;
+
+    html += `<div class="stop-card${cardClass}" onclick="focusStop('${s.id}')">
+      <div class="stop-num ${numClass}">${s.isBulky ? '📦' : i+1}</div>
+      <div class="stop-info">
+        <div class="stop-name">${s.name} ${pkgBadge}</div>
+        <div class="stop-addr">${s.address}</div>
+        ${codesDisplay}
+        ${tags.length ? `<div class="stop-tags">${tags.join('')}</div>` : ''}
+      </div>
+      <div class="stop-actions">
+        <button class="sab" onclick="event.stopPropagation();focusStop('${s.id}')" title="Ver no mapa"><i class="fas fa-crosshairs"></i></button>
+        <button class="sab com${s.isCommercial ? ' active' : ''}" onclick="event.stopPropagation();toggleCommercial('${s.id}')" title="${s.isCommercial ? 'Remover comércio' : 'Marcar como comércio'}">
+          <i class="fas fa-store" style="${s.isCommercial ? 'color:var(--success)' : ''}"></i>
+        </button>
+        <button class="sab bul${s.isBulky ? ' active' : ''}" onclick="event.stopPropagation();toggleBulky('${s.id}')" title="${s.isBulky ? 'Remover volumoso' : 'Marcar como volumoso/laranja'}">
+          <i class="fas fa-box" style="${s.isBulky ? 'color:var(--orange)' : ''}"></i>
+        </button>
+        <button class="sab del" onclick="event.stopPropagation();removeStop('${s.id}')" title="Remover"><i class="fas fa-times"></i></button>
+      </div>
+    </div>`;
+  });
+
+  if (noGeoStops.length > 0) {
+    html += `<div class="section-header" style="margin-top:6px"><span style="color:var(--warning)">⚠ Sem coordenadas (${noGeoStops.length})</span></div>`;
+    noGeoStops.forEach(s => {
+      html += `<div class="stop-card">
+        <div class="stop-num" style="background:var(--warning)">?</div>
+        <div class="stop-info">
+          <div class="stop-name">${s.name}</div>
+          <div class="stop-addr">${s.address}</div>
+          <div class="stop-code">${s.code}</div>
+          <div class="stop-tags"><span class="tag tag-nolat"><i class="fas fa-exclamation-triangle"></i> Sem GPS</span></div>
+        </div>
+        <div class="stop-actions">
+          <button class="sab del" onclick="event.stopPropagation();removeStop('${s.id}')" title="Remover"><i class="fas fa-times"></i></button>
+        </div>
+      </div>`;
+    });
+  }
+
+  el.innerHTML = html;
+}
+
+function focusStop(id) {
+  const s = stops.find(s => String(s.id) === String(id));
+  if (s && s.lat) { map.setView([s.lat, s.lng], 17); }
+}
+
+function removeStop(id) {
+  stops = stops.filter(s => String(s.id) !== String(id));
+  renderList(); refreshMap(); updateStats(); updateOptimizeBtn();
+}
+
+// ═══════════════════════════════════════════
+// STATS & MAP INFO
+// ═══════════════════════════════════════════
+function updateStats(totalKm) {
+  const count = stops.filter(s => s.geocoded).length;
+  const totalPkgs = stops.filter(s => s.geocoded).reduce((sum, s) => sum + (s.packageCount || 1), 0);
+  document.getElementById('stat-stops').textContent = count;
+  document.getElementById('stat-packages').textContent = totalPkgs;
+
+  if (totalKm !== undefined) {
+    document.getElementById('stat-km').textContent = totalKm.toFixed(1) + ' km';
+    const mins = Math.round(totalKm / 28 * 60);
+    document.getElementById('stat-time').textContent = mins >= 60
+      ? Math.floor(mins/60) + 'h' + (mins%60 > 0 ? (mins%60) + 'min' : '')
+      : mins + 'min';
+  }
+}
+
+function showMapInfo(total, commercialCount, residentialCount, bulkyCount) {
+  const el = document.getElementById('map-info');
+  el.style.display = '';
+
+  document.getElementById('map-total-km').textContent = total.toFixed(1);
+  const mins = Math.round(total / 28 * 60);
+  document.getElementById('map-total-time').textContent = (mins >= 60
+    ? Math.floor(mins/60) + 'h ' + (mins%60) + 'min'
+    : mins + 'min') + ' estimados';
+
+  // Mode badge
+  const badge = document.getElementById('mode-map-badge');
+  badge.className = 'mode-badge ' + MODE_INFO[currentMode].badgeClass;
+  badge.innerHTML = `<i class="${MODE_INFO[currentMode].mapIcon}"></i> ${MODE_INFO[currentMode].badge}`;
+
+  // Commercial info
+  const comInfo = document.getElementById('map-commercial-info');
+  if (commercialCount > 0) {
+    comInfo.style.display = 'flex';
+    document.getElementById('map-commercial-text').textContent = `${commercialCount} comércios → ${residentialCount} residências`;
+  } else {
+    comInfo.style.display = 'none';
+  }
+
+  // Bulky info
+  const bulkyInfo = document.getElementById('map-bulky-info');
+  if (bulkyCount > 0) {
+    bulkyInfo.style.display = 'flex';
+    document.getElementById('map-bulky-text').textContent = `${bulkyCount} volumosos/laranjas 📦`;
+  } else {
+    bulkyInfo.style.display = 'none';
+  }
+}
+
+function updateOptimizeBtn() {
+  const ok = stops.filter(s => s.geocoded).length >= 2 && origin;
+  document.getElementById('btn-optimize').disabled = !ok;
+}
+
+// ═══════════════════════════════════════════
+// EXPORT / OPEN MAPS
+// ═══════════════════════════════════════════
+function exportRoute() {
+  const lines = ['ROTA — Copiloto de Rotas', `Modo: ${MODE_INFO[currentMode].badge}`, ''];
+  if (origin) lines.push('🟢 PARTIDA: ' + origin.displayName, '');
+
+  stops.filter(s => s.geocoded).forEach((s, i) => {
+    const tags = [];
+    if (s.isCommercial) tags.push('🏪 COMÉRCIO');
+    if (s.isBulky) tags.push('📦 VOLUMOSO/LARANJA');
+    lines.push(`${i+1}. ${s.name} ${tags.join(' ')}`);
+    lines.push(`   ${s.address}`);
+    lines.push(`   Código: ${s.code}`);
+    if (s.lat) lines.push(`   GPS: ${s.lat.toFixed(5)}, ${s.lng.toFixed(5)}`);
+    lines.push('');
+  });
+
+  if (totalDistKm > 0) {
+    lines.push(`Total: ${totalDistKm.toFixed(1)} km`);
+  }
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'rota.txt'; a.click();
+  toast('Rota exportada!', 'success');
+}
+
+function openInMaps() {
+  if (!origin) { toast('Defina o ponto de partida', 'warning'); return; }
+  const geocoded = stops.filter(s => s.geocoded);
+  if (!geocoded.length) { toast('Nenhuma parada localizada', 'warning'); return; }
+
+  let url = `https://www.google.com/maps/dir/?api=1&origin=${origin.lat},${origin.lng}`;
+  const wps = geocoded.slice(0, -1).map(s => `${s.lat},${s.lng}`).join('|');
+  const dest = geocoded[geocoded.length - 1];
+  url += `&destination=${dest.lat},${dest.lng}`;
+  if (wps) url += `&waypoints=${encodeURIComponent(wps)}`;
+  url += '&travelmode=driving';
+  window.open(url, '_blank');
+}
+
+// ═══════════════════════════════════════════
+// CLEAR
+// ═══════════════════════════════════════════
+function clearAll() {
+  if (stops.length === 0 && !origin) return;
+  if (!confirm('Limpar todas as paradas e o ponto de partida?')) return;
+  stops = []; origin = null; totalDistKm = 0;
+  document.getElementById('origin-input').value = '';
+  document.getElementById('origin-status').style.display = 'none';
+  document.getElementById('map-info').style.display = 'none';
+  document.getElementById('upload-zone').classList.remove('has-file');
+  document.getElementById('upload-text').textContent = 'Clique ou arraste o arquivo aqui';
+  document.getElementById('upload-sub').textContent = '.xlsx, .xls ou .csv — planilha da Shopee/Correios';
+  document.getElementById('file-input').value = '';
+  document.getElementById('btn-qr').style.display = 'none';
+  renderList();
+  refreshMap();
+  updateOptimizeBtn();
+}
+
+// ═══════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function showLoading(msg) {
+  document.getElementById('map-loading').classList.add('show');
+  document.getElementById('loading-text').textContent = msg || 'Aguarde...';
+}
+function hideLoading() { document.getElementById('map-loading').classList.remove('show'); }
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+function toast(msg, type) {
+  const ct = document.getElementById('toasts');
+  const t = document.createElement('div');
+  t.className = 'toast ' + (type || '');
+  const icons = { success: 'check-circle', warning: 'exclamation-triangle', error: 'times-circle' };
+  t.innerHTML = `<i class="fas fa-${icons[type] || 'info-circle'}"></i> ${msg}`;
+  ct.appendChild(t);
+  setTimeout(() => { t.style.opacity='0'; t.style.transition='opacity .3s'; setTimeout(() => t.remove(), 300); }, 4000);
+}
+
+// ─── Welcome toast
+setTimeout(() => toast('Importe a planilha .xlsx para começar 👆', ''), 600);
+
+// ═══════════════════════════════════════════
+// QR CODE SCANNER
+// ═══════════════════════════════════════════
+let qrStream = null;
+let qrAnimFrame = null;
+let qrLastCode = null;
+
+async function openQRScanner() {
+  if (stops.length === 0) { toast('Importe a planilha primeiro', 'warning'); return; }
+
+  qrLastCode = null;
+  document.getElementById('qr-modal-bg').classList.add('open');
+  document.getElementById('qr-status').textContent = 'Iniciando câmera...';
+  document.getElementById('qr-manual-input').value = '';
+
+  try {
+    qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('qr-video');
+    video.srcObject = qrStream;
+    await video.play();
+    document.getElementById('qr-status').textContent = 'Aponte para o QR Code do pacote';
+    requestAnimationFrame(qrScanLoop);
+  } catch(e) {
+    document.getElementById('qr-status').textContent = 'Câmera não disponível — use a entrada manual abaixo';
+  }
+}
+
+function qrScanLoop() {
+  const video = document.getElementById('qr-video');
+  const canvas = document.getElementById('qr-canvas');
+  if (!video.videoWidth || !document.getElementById('qr-modal-bg').classList.contains('open')) return;
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+  try {
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const found = typeof jsQR === 'function'
+      ? jsQR(imgData.data, imgData.width, imgData.height, { inversionAttempts: 'dontInvert' })
+      : null;
+
+    if (found && found.data && found.data !== qrLastCode) {
+      qrLastCode = found.data;
+      handleScannedCode(found.data);
+      return;
+    }
+  } catch(e) {}
+
+  qrAnimFrame = requestAnimationFrame(qrScanLoop);
+}
+
+function closeQRScanner() {
+  document.getElementById('qr-modal-bg').classList.remove('open');
+  if (qrAnimFrame) { cancelAnimationFrame(qrAnimFrame); qrAnimFrame = null; }
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  const video = document.getElementById('qr-video');
+  video.srcObject = null;
+}
+
+function handleQRManual(e) {
+  if (e.key === 'Enter') submitQRManual();
+}
+
+function submitQRManual() {
+  const code = document.getElementById('qr-manual-input').value.trim();
+  if (!code) return;
+  handleScannedCode(code);
+}
+
+function handleScannedCode(rawCode) {
+  // Extract BR... / SPX... / generic tracking pattern
+  const match = rawCode.match(/([A-Z]{2}\d{8,}[A-Z]{0,2}|SPX[A-Z0-9]{8,}|[A-Z0-9]{10,})/i);
+  const code = match ? match[0].toUpperCase() : rawCode.toUpperCase().trim();
+
+  const stop = findStopByCode(code);
+  if (!stop) {
+    document.getElementById('qr-status').innerHTML =
+      `<span style="color:#f87171">⚠ Código <strong>${code}</strong> não encontrado na rota</span>`;
+    setTimeout(() => {
+      if (document.getElementById('qr-modal-bg').classList.contains('open')) {
+        document.getElementById('qr-status').textContent = 'Aponte para o QR Code do pacote';
+        qrLastCode = null;
+        if (qrStream) requestAnimationFrame(qrScanLoop);
+      }
+    }, 2500);
+    return;
+  }
+
+  closeQRScanner();
+  showQRResult(stop, code);
+}
+
+function showQRResult(stop, scannedCode) {
+  const geocoded = stops.filter(s => s.geocoded);
+  const stopIdx = geocoded.indexOf(stop);
+  const stopNum = stopIdx >= 0 ? stopIdx + 1 : '?';
+
+  const pkgIdx = getPackageIndex(stop, scannedCode);
+  const pkgNum = pkgIdx >= 0 ? pkgIdx + 1 : 1;
+  const pkgTotal = stop.packageCount || 1;
+
+  // Header color
+  const color = stop.isBulky ? '#EA580C' : stop.isCommercial ? '#16A34A' : '#1D6BF3';
+  document.getElementById('qr-result-header').style.background = color;
+
+  document.getElementById('qr-result-num').textContent = stopNum;
+  document.getElementById('qr-result-name').textContent = stop.name;
+  document.getElementById('qr-result-addr').textContent = stop.address;
+  document.getElementById('qr-result-pkg-num').textContent = pkgNum;
+  document.getElementById('qr-result-pkg-of').textContent = pkgTotal;
+  document.getElementById('qr-result-pkg-label').textContent =
+    pkgTotal > 1 ? `pacote de ${pkgTotal} neste endereço` : 'pacote neste endereço';
+
+  // List all codes, highlight scanned
+  const codesHtml = (stop.packages || [{ code: stop.code }]).map(p => {
+    const match = p.code.toUpperCase().includes(scannedCode.toUpperCase()) ||
+                  scannedCode.toUpperCase().includes(p.code.toUpperCase());
+    return `<span class="${match ? 'qr-result-code-scanned' : ''}">${p.code}</span>`;
+  }).join(' &nbsp;·&nbsp; ');
+  document.getElementById('qr-result-codes').innerHTML = codesHtml;
+
+  document.getElementById('qr-result-bg').classList.add('open');
+
+  // Focus stop on map
+  if (stop.lat) map.setView([stop.lat, stop.lng], 17);
+}
+
+function closeQRResult() {
+  document.getElementById('qr-result-bg').classList.remove('open');
+}
+</script>
+</body>
+</html>
